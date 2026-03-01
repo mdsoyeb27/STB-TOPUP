@@ -27,16 +27,16 @@ export default function BottomNav({ view, setView, setIsSidebarOpen }: BottomNav
       </button>
 
       <button 
-        onClick={() => setView('my-orders')}
-        className={`flex flex-col items-center gap-1 ${view === 'my-orders' ? 'text-blue-600' : 'text-slate-400'}`}
+        onClick={() => setView('transactions')}
+        className={`flex flex-col items-center gap-1 ${view === 'transactions' ? 'text-blue-600' : 'text-slate-400'}`}
       >
         <Wallet className="w-5 h-5" />
-        <span className="text-[10px] font-bold">My Orders</span>
+        <span className="text-[10px] font-bold">Transactions</span>
       </button>
 
       <button 
-        onClick={() => window.open('https://t.me/rrrtopup', '_blank')}
-        className="flex flex-col items-center gap-1 text-slate-400"
+        onClick={() => setView('support')}
+        className={`flex flex-col items-center gap-1 ${view === 'support' ? 'text-blue-600' : 'text-slate-400'}`}
       >
         <Headphones className="w-5 h-5" />
         <span className="text-[10px] font-bold">Support</span>

@@ -35,7 +35,11 @@ import {
   Box,
   Phone,
   Hash,
-  Filter
+  Filter,
+  Facebook,
+  Youtube,
+  Mail,
+  Instagram
 } from 'lucide-react';
 import { db, auth } from './firebase';
 import { ref, push, onValue, remove, set, update, get } from 'firebase/database';
@@ -64,7 +68,7 @@ const latestOrders = [
 
 // Types
 interface Game { id: string; name: string; image: string; category: string; description?: string; }
-interface Package { id: string; gameId: string; name: string; amount: string; price: number; bonus?: string; }
+interface Package { id: string; gameId: string; name: string; amount: string; price: number; bonus?: string; inStock?: boolean; }
 interface Order { 
   id: string; userId: string; userEmail: string; uid: string; accountType: string; 
   gameName: string; packageName: string; paymentMethod: string; transactionId: string; 
@@ -130,7 +134,7 @@ export default function App() {
     supportPin: '666994'
   });
   
-  const [view, setView] = useState<'home' | 'game' | 'profile' | 'admin' | 'add-money' | 'transactions' | 'payment-cancelled' | 'privacy' | 'gateway' | 'gateway-payment'>('home');
+  const [view, setView] = useState<'home' | 'game' | 'profile' | 'admin' | 'add-money' | 'transactions' | 'payment-cancelled' | 'privacy' | 'gateway' | 'gateway-payment' | 'support'>('home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
@@ -144,11 +148,27 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [transactionFilter, setTransactionFilter] = useState<'All' | 'Completed' | 'Pending' | 'Cancelled'>('All');
   const [adminTab, setAdminTab] = useState<'orders' | 'games' | 'packages' | 'settings' | 'users' | 'ai'>('orders');
   const [orderSearch, setOrderSearch] = useState('');
   const [aiSearchTrxId, setAiSearchTrxId] = useState('');
   const [aiSearchResult, setAiSearchResult] = useState<Order | null>(null);
   const [isAiSearching, setIsAiSearching] = useState(false);
+  const [realTimeLatestOrders, setRealTimeLatestOrders] = useState<any[]>([]);
+
+  // Real-time Latest Orders
+  useEffect(() => {
+    const combined = orders.map(o => ({
+      name: o.userEmail.split('@')[0],
+      item: o.packageName,
+      price: `${packages.find(p => p.name === o.packageName)?.price || 'N/A'}৳`,
+      status: o.status,
+      timestamp: o.timestamp
+    })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+    
+    setRealTimeLatestOrders(combined);
+  }, [orders, packages]);
+
   const [aiResponse, setAiResponse] = useState<string>('');
 
   // Form States
@@ -377,9 +397,17 @@ export default function App() {
       const orderId = `ORD-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`;
       await set(ref(db, `orders/${orderId}`), {
         id: orderId,
-        userId: user.uid, userEmail: user.email, uid, gameName: selectedGame?.name,
+        userId: user.uid, 
+        userEmail: user.email, 
+        uid, 
+        gameName: selectedGame?.name || 'Wallet', // Handle wallet case
+        gameId: selectedPackage?.gameId, // Save gameId to identify wallet deposits
         packageName: `${selectedPackage?.amount} ${selectedPackage?.name}`,
-        paymentMethod, transactionId: trxId, status: 'Pending', timestamp: Date.now()
+        price: selectedPackage?.price,
+        paymentMethod, 
+        transactionId: trxId, 
+        status: 'Pending', 
+        timestamp: Date.now()
       });
       
       // Update user stats
@@ -399,6 +427,22 @@ export default function App() {
       }, 3000);
     } catch (err) { alert("Error submitting order"); }
     finally { setIsSubmitting(false); }
+  };
+
+  const handleOrderStatusChange = async (order: any, newStatus: string) => {
+    await update(ref(db, `orders/${order.id}`), { status: newStatus });
+    
+    // Automatic Wallet Update Logic
+    if (newStatus === 'Completed' && order.gameId === 'wallet' && order.status !== 'Completed') {
+      const userRef = ref(db, `users/${order.userId}`);
+      const snapshot = await get(userRef);
+      if (snapshot.exists()) {
+        const userData = snapshot.val();
+        const newBalance = (userData.balance || 0) + (order.price || 0);
+        await update(userRef, { balance: newBalance });
+        alert(`Automatically added ৳${order.price} to user's wallet!`);
+      }
+    }
   };
 
   const adminSaveGame = async () => {
@@ -678,13 +722,15 @@ export default function App() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="p-4 border-b border-slate-100">
                 <h3 className="text-xl font-bold text-center text-slate-800">Latest Orders</h3>
-                <p className="text-center text-xs text-red-500 font-bold mt-1">Last updated 6 hours ago</p>
+                <p className="text-center text-xs text-red-500 font-bold mt-1">Real-time updates</p>
               </div>
               <div className="divide-y divide-slate-100">
-                {latestOrders.map((order, i) => (
-                  <div key={i} className="p-4 flex items-center justify-between">
+                {realTimeLatestOrders.map((order, i) => (
+                  <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <img src={order.img} className="w-10 h-10 rounded-full" />
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs uppercase border border-slate-200">
+                        {order.name.slice(0, 2)}
+                      </div>
                       <div>
                         <div className="font-bold text-slate-800 text-sm">{order.name}</div>
                         <div className="text-xs text-slate-500 font-bold flex items-center gap-1">
@@ -692,7 +738,11 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${order.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                      order.status === 'Completed' ? 'bg-green-100 text-green-600' : 
+                      order.status === 'Cancelled' ? 'bg-red-100 text-red-600' : 
+                      'bg-orange-100 text-orange-600'
+                    }`}>
                       {order.status}
                     </div>
                   </div>
@@ -707,8 +757,42 @@ export default function App() {
 
         {view === 'game' && selectedGame && (
           <div className="space-y-6 pb-24">
-            <div className="flex items-center gap-3 mb-4">
-               <h1 className="text-2xl font-black text-slate-800">UID Topup [BD]</h1>
+            {/* Gaming Banner Header */}
+            <div className="relative h-32 md:h-48 rounded-2xl overflow-hidden shadow-xl mb-6 group">
+              {/* Background with Overlay */}
+              <div className="absolute inset-0 bg-indigo-900">
+                <img 
+                  src={selectedGame.image} 
+                  className="w-full h-full object-cover opacity-40 blur-sm scale-110 group-hover:scale-100 transition-transform duration-1000" 
+                  alt="Banner Background"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-950/80 via-transparent to-indigo-950/80"></div>
+              </div>
+
+              {/* Content */}
+              <div className="absolute inset-0 flex items-center justify-between px-6 md:px-12">
+                {/* Left: Logo & Delivery Time */}
+                <div className="flex flex-col gap-2">
+                  <div className="w-16 h-16 md:w-24 md:h-24 bg-white p-1 rounded-2xl shadow-2xl border-2 border-white/20 overflow-hidden">
+                    <img src={selectedGame.image} className="w-full h-full object-cover rounded-xl" alt="Game Logo" />
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                    <span className="text-[10px] md:text-xs font-black text-white tracking-tight">মাত্র ২ সেকেন্ডে ডেলিভারি</span>
+                  </div>
+                </div>
+
+                {/* Right: Game Name */}
+                <div className="text-right">
+                  <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter drop-shadow-2xl uppercase italic">
+                    {selectedGame.name}
+                  </h1>
+                  <div className="flex justify-end gap-2 mt-1">
+                    <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Official</div>
+                    <div className="bg-blue-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Instant</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Step 1: Packages */}
@@ -722,16 +806,27 @@ export default function App() {
                 {packages.filter(p => p.gameId === selectedGame.id).map(p => (
                   <div 
                     key={p.id} 
-                    onClick={() => setSelectedPackage(p)} 
-                    className={`relative p-3 rounded-lg border cursor-pointer flex items-center justify-between transition-all ${selectedPackage?.id === p.id ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-blue-300'}`}
+                    onClick={() => p.inStock !== false && setSelectedPackage(p)} 
+                    className={`relative p-3 rounded-lg border flex items-center justify-between transition-all ${
+                      p.inStock === false 
+                        ? 'border-slate-100 bg-slate-50 opacity-60 grayscale blur-[1px] cursor-not-allowed' 
+                        : selectedPackage?.id === p.id 
+                          ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500 cursor-pointer' 
+                          : 'border-slate-200 bg-white hover:border-blue-300 cursor-pointer'
+                    }`}
                   >
-                    {selectedPackage?.id === p.id && (
+                    {p.inStock === false && (
+                      <div className="absolute -top-2 -right-1 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm z-10 animate-pulse">
+                        Stock Out
+                      </div>
+                    )}
+                    {selectedPackage?.id === p.id && p.inStock !== false && (
                         <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full p-0.5 shadow-sm">
                             <CheckCircle className="w-3 h-3" />
                         </div>
                     )}
                     <div className="flex items-center gap-2">
-                      <Diamond className="w-4 h-4 text-blue-500 fill-blue-500" />
+                      <Diamond className={`w-4 h-4 ${p.inStock === false ? 'text-slate-400 fill-slate-400' : 'text-blue-500 fill-blue-500'}`} />
                       <span className="text-sm font-bold text-slate-700">{p.amount} {p.name}</span>
                     </div>
                     <div className="text-slate-900 font-black text-sm">৳{p.price}</div>
@@ -770,39 +865,63 @@ export default function App() {
                 {/* Wallet Card */}
                 <div 
                   onClick={() => setPaymentType('wallet')} 
-                  className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${paymentType === 'wallet' ? 'border-blue-600' : 'border-slate-200 hover:border-blue-300'}`}
+                  className={`relative rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-300 group ${
+                    paymentType === 'wallet' 
+                      ? 'border-blue-600 ring-4 ring-blue-500/10 shadow-lg' 
+                      : 'border-slate-200 hover:border-blue-300 bg-white'
+                  }`}
                 >
-                  <div className="p-4 flex flex-col items-center justify-center gap-2 h-24 bg-white">
+                  <div className="p-4 flex flex-col items-center justify-center gap-2 h-28">
                     <div className="flex items-center gap-2">
-                        <Wallet className="w-8 h-8 text-blue-500" />
-                        <div className="text-center leading-none">
-                            <span className="block text-lg font-black text-blue-600 italic">STB</span>
-                            <span className="block text-[10px] font-bold text-slate-800">TOPUP</span>
+                        <div className={`p-2 rounded-xl transition-colors ${paymentType === 'wallet' ? 'bg-blue-50' : 'bg-slate-50'}`}>
+                          <Wallet className={`w-8 h-8 ${paymentType === 'wallet' ? 'text-blue-600' : 'text-slate-400'}`} />
+                        </div>
+                        <div className="text-left leading-none">
+                            <span className={`block text-xl font-black italic ${paymentType === 'wallet' ? 'text-blue-600' : 'text-slate-400'}`}>STB</span>
+                            <span className="block text-[10px] font-black text-slate-800 tracking-widest">TOPUP</span>
                         </div>
                     </div>
-                    <div className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">WALLET PAY</div>
+                    <div className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${paymentType === 'wallet' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                      WALLET PAY
+                    </div>
                   </div>
-                  <div className={`py-2 px-1 text-center text-xs font-bold text-white ${paymentType === 'wallet' ? 'bg-blue-600' : 'bg-slate-400'}`}>
-                    Wallet (৳: {userProfile.balance})
+                  <div className={`py-2 px-1 text-center text-xs font-black transition-colors ${paymentType === 'wallet' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                    Balance: ৳{userProfile.balance}
                   </div>
+                  {paymentType === 'wallet' && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="w-5 h-5 text-blue-600 fill-white" />
+                    </div>
+                  )}
                 </div>
                 
                 {/* Instant Pay Card */}
                 <div 
                   onClick={() => setPaymentType('instant')} 
-                  className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${paymentType === 'instant' ? 'border-blue-600' : 'border-slate-200 hover:border-blue-300'}`}
+                  className={`relative rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-300 group ${
+                    paymentType === 'instant' 
+                      ? 'border-indigo-600 ring-4 ring-indigo-500/10 shadow-lg' 
+                      : 'border-slate-200 hover:border-indigo-300 bg-white'
+                  }`}
                 >
-                  <div className="p-4 flex flex-col items-center justify-center gap-2 h-24 bg-white">
-                    <div className="flex items-center gap-2 scale-90">
-                       <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Bkash_logo.png/1200px-Bkash_logo.png" className="h-4 object-contain" />
-                       <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Nagad_Logo.png/1200px-Nagad_Logo.png" className="h-4 object-contain" />
-                       <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Rocket_Logo.png/1200px-Rocket_Logo.png" className="h-4 object-contain" />
+                  <div className="p-4 flex flex-col items-center justify-center gap-3 h-28">
+                    <div className="flex items-center gap-2 scale-110">
+                       <img src={siteSettings.bkashLogo} className="h-5 object-contain" alt="Bkash" />
+                       <img src={siteSettings.nagadLogo} className="h-5 object-contain" alt="Nagad" />
+                       <img src={siteSettings.rocketLogo} className="h-5 object-contain" alt="Rocket" />
                     </div>
-                    <div className="text-[10px] font-black text-slate-600 uppercase tracking-tighter mt-1">INSTANT PAY</div>
+                    <div className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${paymentType === 'instant' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                      INSTANT PAY
+                    </div>
                   </div>
-                  <div className={`py-2 px-1 text-center text-xs font-bold text-white ${paymentType === 'instant' ? 'bg-blue-600' : 'bg-slate-400'}`}>
-                    Instant Pay
+                  <div className={`py-2 px-1 text-center text-xs font-black transition-colors ${paymentType === 'instant' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                    bKash / Nagad / Rocket
                   </div>
+                  {paymentType === 'instant' && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="w-5 h-5 text-indigo-600 fill-white" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -819,7 +938,15 @@ export default function App() {
               </div>
 
               {/* Buy Now Button (Inside Payment Section) */}
-              <div className="flex justify-end">
+              <div className="flex justify-end items-center gap-3">
+                  {user && selectedPackage && userProfile.balance < selectedPackage.price && (
+                    <button 
+                      onClick={() => setView('add-money')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2 animate-bounce"
+                    >
+                      <Plus className="w-4 h-4" /> ADD MONEY
+                    </button>
+                  )}
                   <button 
                     onClick={() => { 
                         if (!user) {
@@ -843,7 +970,7 @@ export default function App() {
                           }
                         }
                     }} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-black text-sm shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3.5 rounded-xl font-black text-sm shadow-xl shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
                     >
                     {user ? 'BUY NOW' : 'LOGIN TO BUY'}
                   </button>
@@ -858,32 +985,40 @@ export default function App() {
               </div>
               
               <div className="space-y-4 text-sm font-bold text-slate-700">
-                <p className="flex gap-2">
-                  <span className="text-slate-900">▶</span>
-                  অর্ডার করার আগে অবশ্যই ভালোভাবে রুলস গুলো পড়ে নেবেন
-                </p>
-                <div className="space-y-2 pl-4">
-                  <p className="flex gap-2">
-                    <span className="text-slate-900">◉</span>
-                    শুধুমাত্র বাংলাদেশ সার্ভার এর আইডিতে টপ আপ করতে পারবেন।
-                  </p>
-                  <p className="flex gap-2">
-                    <span className="text-slate-900">◉</span>
-                    Player ID Code ভুল দিয়ে Diamond না পেলে {siteSettings.siteName} কর্তৃপক্ষ দায়ী নয়।
-                  </p>
-                  <p className="flex gap-2">
-                    <span className="text-slate-900">◉</span>
-                    আইডি কোড দিয়ে অর্ডার করলে এবং কোনো কারণে ডায়মন্ড না গেলে চেক করার জন্য গেইম এর লগিন ইনফো আইডি পাসওয়ার্ড দিতে হবে।
-                  </p>
-                  <p className="flex gap-2">
-                    <span className="text-slate-900">◉</span>
-                    ডেলিভারি টাইম সাধারণত ১-২ মিনিট এর মধ্যেই হয়ে থাকে, ইভেন্ট থাকলে ২-৩ ঘণ্টা বা তার ও বেশি সময় লাগতে পারে।
-                  </p>
-                  <p className="flex gap-2">
-                    <span className="text-slate-900">◉</span>
-                    সার্ভারে সমস্যা থাকলে অথবা স্টক না থাকলে সর্বোচ্চ ২৪ ঘণ্টা পর্যন্ত লাগতে পারে। ২৪ ঘন্টার মধ্যে রিফান্ড চাইলে ওয়ালেট এ রিফান্ড করে দেওয়া হবে।
-                  </p>
-                </div>
+                {selectedGame.description ? (
+                  <div className="prose prose-sm max-w-none text-slate-700 font-bold whitespace-pre-wrap">
+                    {selectedGame.description}
+                  </div>
+                ) : (
+                  <>
+                    <p className="flex gap-2">
+                      <span className="text-slate-900">▶</span>
+                      অর্ডার করার আগে অবশ্যই ভালোভাবে রুলস গুলো পড়ে নেবেন
+                    </p>
+                    <div className="space-y-2 pl-4">
+                      <p className="flex gap-2">
+                        <span className="text-slate-900">◉</span>
+                        শুধুমাত্র বাংলাদেশ সার্ভার এর আইডিতে টপ আপ করতে পারবেন।
+                      </p>
+                      <p className="flex gap-2">
+                        <span className="text-slate-900">◉</span>
+                        Player ID Code ভুল দিয়ে Diamond না পেলে {siteSettings.siteName} কর্তৃপক্ষ দায়ী নয়।
+                      </p>
+                      <p className="flex gap-2">
+                        <span className="text-slate-900">◉</span>
+                        আইডি কোড দিয়ে অর্ডার করলে এবং কোনো কারণে ডায়মন্ড না গেলে চেক করার জন্য গেইম এর লগিন ইনফো আইডি পাসওয়ার্ড দিতে হবে।
+                      </p>
+                      <p className="flex gap-2">
+                        <span className="text-slate-900">◉</span>
+                        ডেলিভারি টাইম সাধারণত ১-২ মিনিট এর মধ্যেই হয়ে থাকে, ইভেন্ট থাকলে ২-৩ ঘণ্টা বা তার ও বেশি সময় লাগতে পারে।
+                      </p>
+                      <p className="flex gap-2">
+                        <span className="text-slate-900">◉</span>
+                        সার্ভারে সমস্যা থাকলে অথবা স্টক না থাকলে সর্বোচ্চ ২৪ ঘণ্টা পর্যন্ত লাগতে পারে। ২৪ ঘন্টার মধ্যে রিফান্ড চাইলে ওয়ালেট এ রিফান্ড করে দেওয়া হবে।
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
                         {/* Floating Support Button */}
@@ -1311,6 +1446,256 @@ export default function App() {
           </div>
         )}
 
+        {view === 'support' && (
+          <div className="max-w-6xl mx-auto py-12 px-4 space-y-12">
+            <div className="text-center space-y-4">
+              <h1 className="text-5xl font-black text-indigo-950">Contact Us</h1>
+              <p className="text-slate-500 font-bold max-w-2xl mx-auto">
+                We're here to help! Get in touch with our support team for any questions, concerns, or assistance you need.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1 space-y-6">
+                {/* Telegram Card */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <Send className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-black text-indigo-950">Telegram</div>
+                    <div className="text-xs text-slate-400 font-bold">24/7 Live Chat</div>
+                    <button onClick={() => window.open(`https://t.me/${siteSettings.telegram}`, '_blank')} className="text-blue-600 text-xs font-black mt-1 flex items-center gap-1">Start Chat <ArrowRight className="w-3 h-3" /></button>
+                  </div>
+                </div>
+
+                {/* Get In Touch Card */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
+                  <h3 className="text-xl font-black text-indigo-950 border-b border-slate-50 pb-4">Get In Touch</h3>
+                  
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-black text-indigo-950 text-sm">Email</div>
+                        <div className="text-xs text-slate-500 font-bold">stbtopup@gmail.com</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-black text-indigo-950 text-sm">Business Hours</div>
+                        <div className="text-xs text-slate-500 font-bold">9:00 AM - 11:59 PM (GMT+6)</div>
+                        <div className="text-[10px] text-slate-400 font-bold">7 days a week</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                        <Send className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-black text-indigo-950 text-sm">Telegram Group</div>
+                        <button onClick={() => window.open(`https://t.me/${siteSettings.telegram}`, '_blank')} className="text-xs text-blue-600 font-bold hover:underline">Join Our Community</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Follow Us Card */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                  <h3 className="text-xl font-black text-indigo-950">Follow Us</h3>
+                  <div className="flex gap-4">
+                    <button className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100 hover:scale-110 transition-transform">
+                      <Facebook className="w-6 h-6" />
+                    </button>
+                    <button className="w-12 h-12 bg-red-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-100 hover:scale-110 transition-transform">
+                      <Youtube className="w-6 h-6" />
+                    </button>
+                    <button className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 hover:scale-110 transition-transform">
+                      <Send className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2 space-y-8">
+                {/* Message Form */}
+                <div className="bg-white p-8 md:p-12 rounded-[3rem] border border-slate-100 shadow-xl space-y-8">
+                  <h3 className="text-2xl font-black text-indigo-950">Send us a Message</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Full Name *</label>
+                      <input type="text" placeholder="Enter your full name" className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 p-4 rounded-2xl text-sm font-bold outline-none transition-all" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Email Address *</label>
+                      <input type="email" placeholder="Enter your email" className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 p-4 rounded-2xl text-sm font-bold outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Subject *</label>
+                    <input type="text" placeholder="What's this about?" className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 p-4 rounded-2xl text-sm font-bold outline-none transition-all" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Message *</label>
+                    <textarea rows={5} placeholder="Tell us how we can help you..." className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 p-4 rounded-2xl text-sm font-bold outline-none transition-all resize-none"></textarea>
+                  </div>
+                  <button className="w-full bg-indigo-950 text-white py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                    <Send className="w-5 h-5" /> SEND MESSAGE
+                  </button>
+
+                  <div className="bg-indigo-50 p-6 rounded-2xl flex items-center gap-4 border border-indigo-100">
+                    <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0">
+                      <Headphones className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-black text-indigo-950 text-sm">Need Immediate Help?</div>
+                      <p className="text-xs text-slate-500 font-bold">For urgent support, please use our instant messaging channels for faster response.</p>
+                      <button onClick={() => window.open(`https://t.me/${siteSettings.telegram}`, '_blank')} className="text-indigo-600 text-xs font-black mt-2 flex items-center gap-1">
+                        <Send className="w-4 h-4" /> Telegram
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Section */}
+            <div className="space-y-8 pt-12">
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-black text-indigo-950">Frequently Asked Questions</h2>
+                <p className="text-slate-400 font-bold text-sm">Find quick answers to common questions</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { q: 'How do I add money to my wallet?', a: 'You can add money through various payment methods including bKash, Nagad, and bank transfers.' },
+                  { q: 'What are your business hours?', a: 'We provide support from 9:00 AM to 11:59 PM (GMT+6) every day of the week.' },
+                  { q: 'How long does order processing take?', a: 'Most orders are processed within 5-10 minutes. For instant top-ups, you\'ll receive confirmation immediately.' }
+                ].map((faq, i) => (
+                  <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-3">
+                    <div className="font-black text-indigo-950">{faq.q}</div>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed">{faq.a}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'transactions' && (
+          <div className="max-w-5xl mx-auto py-12 px-4 space-y-8">
+            {/* Balance Card */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
+                  <Wallet className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Available Balance</div>
+                  <div className="text-4xl font-black text-indigo-950">৳{userProfile.balance}</div>
+                </div>
+              </div>
+              <button onClick={() => setView('add-money')} className="w-full md:w-auto bg-indigo-950 text-white px-10 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-105 transition-all flex items-center justify-center gap-3">
+                <Plus className="w-5 h-5" /> ADD MONEY
+              </button>
+            </div>
+
+            {/* Transactions List */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
+              <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <History className="w-6 h-6 text-indigo-600" />
+                  <h3 className="text-xl font-black text-indigo-950">Transaction History</h3>
+                </div>
+                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl">
+                  {['All', 'Completed', 'Pending', 'Cancelled'].map(f => (
+                    <button 
+                      key={f} 
+                      onClick={() => setTransactionFilter(f as any)}
+                      className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${transactionFilter === f ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-indigo-600'}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="divide-y divide-slate-50">
+                {userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).length > 0 ? userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).map(o => (
+                  <div key={o.id} className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-6 w-full md:w-auto">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+                        o.status === 'Completed' ? 'bg-green-50 text-green-600' :
+                        o.status === 'Cancelled' ? 'bg-red-50 text-red-600' :
+                        'bg-orange-50 text-orange-600'
+                      }`}>
+                        {o.status === 'Completed' ? <CheckCircle className="w-7 h-7" /> : 
+                         o.status === 'Cancelled' ? <X className="w-7 h-7" /> : 
+                         <Clock className="w-7 h-7" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                            o.status === 'Completed' ? 'bg-green-100 text-green-600' :
+                            o.status === 'Cancelled' ? 'bg-red-100 text-red-600' :
+                            'bg-orange-100 text-orange-600'
+                          }`}>{o.status}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order #{o.id}</span>
+                        </div>
+                        <div className="font-black text-indigo-950 text-sm truncate">{o.packageName}</div>
+                        <div className="text-[10px] text-slate-400 font-bold flex items-center gap-2 mt-1">
+                          <Hash className="w-3 h-3" /> Trx: {o.transactionId || 'N/A'}
+                          <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                          <Clock className="w-3 h-3" /> {new Date(o.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full md:w-auto gap-8">
+                      <div className="text-right">
+                        <div className="text-2xl font-black text-indigo-950">৳{packages.find(p => p.name === o.packageName)?.price || '0'}</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount Paid</div>
+                      </div>
+                      <div className="flex gap-2">
+                        {o.status === 'Pending' && (
+                          <>
+                            <button onClick={() => setView('gateway')} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all">PAY NOW</button>
+                            <button onClick={() => {
+                              if(confirm('Cancel this order?')) {
+                                update(ref(db, `orders/${o.id}`), { status: 'Cancelled' });
+                              }
+                            }} className="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-red-100 transition-all">CANCEL</button>
+                          </>
+                        )}
+                        <button onClick={() => {
+                          setOrderSearch(o.id);
+                          setView('my-orders');
+                        }} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="p-20 text-center space-y-4">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-200">
+                      <History className="w-10 h-10" />
+                    </div>
+                    <div className="text-slate-400 font-bold">No transactions found yet.</div>
+                  </div>
+                )}
+              </div>
+              <div className="p-8 bg-slate-50/50 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">End of Transaction History</div>
+            </div>
+          </div>
+        )}
+
         {view === 'privacy' && (
           <div className="max-w-4xl mx-auto space-y-8 py-12">
             <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100">
@@ -1428,7 +1813,7 @@ export default function App() {
                             </div>
                           </td>
                           <td className="p-8">
-                            <select value={o.status} onChange={e => update(ref(db, `orders/${o.id}`), { status: e.target.value })} className={`text-[10px] font-black p-2 rounded-xl border-2 outline-none transition-all ${
+                            <select value={o.status} onChange={e => handleOrderStatusChange(o, e.target.value)} className={`text-[10px] font-black p-2 rounded-xl border-2 outline-none transition-all ${
                               o.status === 'Completed' ? 'border-green-100 text-green-600 bg-green-50' :
                               o.status === 'Cancelled' ? 'border-red-100 text-red-600 bg-red-50' :
                               'border-orange-100 text-orange-600 bg-orange-50'
@@ -1480,7 +1865,7 @@ export default function App() {
 
                       <div className="flex items-center justify-between gap-4">
                         <div className="text-xs font-black text-red-500 bg-red-50 px-3 py-1 rounded-lg">ID: {o.uid}</div>
-                        <select value={o.status} onChange={e => update(ref(db, `orders/${o.id}`), { status: e.target.value })} className={`flex-1 text-[10px] font-black p-2 rounded-xl border-2 outline-none transition-all ${
+                        <select value={o.status} onChange={e => handleOrderStatusChange(o, e.target.value)} className={`flex-1 text-[10px] font-black p-2 rounded-xl border-2 outline-none transition-all ${
                           o.status === 'Completed' ? 'border-green-100 text-green-600 bg-green-50' :
                           o.status === 'Cancelled' ? 'border-red-100 text-red-600 bg-red-50' :
                           'border-orange-100 text-orange-600 bg-orange-50'
@@ -2154,6 +2539,16 @@ export default function App() {
                 <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
                 <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
                 <input placeholder="Price" type="number" value={editPkg.price === undefined || isNaN(editPkg.price as number) ? '' : editPkg.price} onChange={e => setEditPkg({...editPkg, price: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
+                <div className="flex items-center gap-3 p-3 border rounded-xl">
+                  <input 
+                    type="checkbox" 
+                    id="inStock"
+                    checked={editPkg.inStock !== false} 
+                    onChange={e => setEditPkg({...editPkg, inStock: e.target.checked})} 
+                    className="w-5 h-5 accent-indigo-600"
+                  />
+                  <label htmlFor="inStock" className="text-sm font-bold text-slate-700">In Stock</label>
+                </div>
                 <button onClick={adminSavePkg} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
               </div>
             </div>
