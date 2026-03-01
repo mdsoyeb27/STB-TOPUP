@@ -32,7 +32,7 @@ export default function AIChatbot() {
     if (!inputText.trim()) return;
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text: inputText,
       sender: 'user',
       timestamp: Date.now()
@@ -74,7 +74,7 @@ export default function AIChatbot() {
       });
 
       const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         text: response.text || "I'm sorry, I couldn't process that. Please try again.",
         sender: 'ai',
         timestamp: Date.now()
@@ -84,7 +84,7 @@ export default function AIChatbot() {
     } catch (error) {
       console.error("AI Error:", error);
       const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         text: "Sorry, I'm having trouble connecting right now. Please try again later.",
         sender: 'ai',
         timestamp: Date.now()

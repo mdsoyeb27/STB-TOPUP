@@ -55,6 +55,7 @@ import {
 import { GoogleGenAI } from "@google/genai";
 import AIChatbot from './components/AIChatbot';
 import BottomNav from './components/BottomNav';
+import { Modal } from './components/Modal';
 
 // Mock Data for Latest Orders
 const latestOrders = [
@@ -159,6 +160,7 @@ export default function App() {
   // Real-time Latest Orders
   useEffect(() => {
     const combined = orders.map(o => ({
+      id: o.id,
       name: o.userEmail.split('@')[0],
       item: o.packageName,
       price: `${packages.find(p => p.name === o.packageName)?.price || 'N/A'}৳`,
@@ -642,7 +644,7 @@ export default function App() {
             <section className="relative h-48 md:h-80 rounded-3xl overflow-hidden shadow-lg group">
               <div className="flex transition-transform duration-700 h-full">
                 {siteSettings.sliderImages.map((img, i) => (
-                  <img key={i} src={img} className="w-full h-full object-cover flex-shrink-0" />
+                  <img key={`slider-${i}`} src={img} className="w-full h-full object-cover flex-shrink-0" />
                 ))}
               </div>
               {/* Simple Overlay */}
@@ -655,7 +657,7 @@ export default function App() {
 
             {/* Categories */}
             {Array.from(new Set(games.map(g => g.category))).map(cat => (
-              <div key={cat} className="space-y-4">
+              <div key={cat || 'uncategorized'} className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
                   <h2 className="text-lg font-black text-center text-slate-800 uppercase tracking-wider">{cat}</h2>
@@ -664,7 +666,7 @@ export default function App() {
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
                   {games.filter(g => g.category === cat).map((g, idx) => (
                     <motion.div 
-                      key={g.id} 
+                      key={`game-item-${g.id || idx}`} 
                       whileHover={{ y: -5 }} 
                       whileTap={{ scale: 0.95 }}
                       onClick={() => { setSelectedGame(g); setView('game'); }} 
@@ -726,7 +728,7 @@ export default function App() {
               </div>
               <div className="divide-y divide-slate-100">
                 {realTimeLatestOrders.map((order, i) => (
-                  <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div key={`latest-order-${order.id || i}`} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs uppercase border border-slate-200">
                         {order.name.slice(0, 2)}
@@ -803,9 +805,9 @@ export default function App() {
               </div>
               
               <div className="grid grid-cols-2 gap-3">
-                {packages.filter(p => p.gameId === selectedGame.id).map(p => (
+                {packages.filter(p => p.gameId === selectedGame.id).map((p, i) => (
                   <div 
-                    key={p.id} 
+                    key={`package-item-${p.id || i}`} 
                     onClick={() => p.inStock !== false && setSelectedPackage(p)} 
                     className={`relative p-3 rounded-lg border flex items-center justify-between transition-all ${
                       p.inStock === false 
@@ -1179,26 +1181,21 @@ export default function App() {
               )}
             </div>
             
-            <AnimatePresence>
-                {orderSuccess && (
-                  <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }} 
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
-                  >
-                    <div className="bg-white p-8 rounded-3xl text-center space-y-4 max-w-xs mx-4">
-                      <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-green-200">
-                        <CheckCircle className="w-10 h-10 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-2xl font-black text-slate-800">Payment Successful!</h3>
-                        <p className="text-slate-500 font-bold">Your order is being processed.</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-            </AnimatePresence>
+        <Modal
+          isOpen={orderSuccess}
+          onClose={() => setOrderSuccess(false)}
+          maxWidth="max-w-xs"
+        >
+          <div className="text-center space-y-4 py-4">
+            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-green-200">
+              <CheckCircle className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-slate-800">Payment Successful!</h3>
+              <p className="text-slate-500 font-bold">Your order is being processed.</p>
+            </div>
+          </div>
+        </Modal>
           </div>
         )}
 
@@ -1228,8 +1225,8 @@ export default function App() {
                 { label: 'Weekly Spent', value: `৳${userProfile.totalSpent}`, color: 'text-red-500' },
                 { label: 'Total Spent', value: userProfile.totalSpent, color: 'text-red-500' },
                 { label: 'Total Order', value: userProfile.totalOrders, color: 'text-red-500' }
-              ].map((stat, i) => (
-                <div key={i} className="bg-white p-6 rounded-2xl border border-red-100 text-center space-y-1 shadow-sm">
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white p-6 rounded-2xl border border-red-100 text-center space-y-1 shadow-sm">
                   <div className={`text-lg font-black ${stat.color}`}>{stat.value}</div>
                   <div className="text-[10px] font-black text-indigo-950 uppercase">{stat.label}</div>
                 </div>
@@ -1336,8 +1333,8 @@ export default function App() {
             </div>
 
             <div className="space-y-4">
-              {userOrders.length > 0 ? userOrders.map(o => (
-                <div key={o.id} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 mx-2 space-y-4 relative overflow-hidden">
+              {userOrders.length > 0 ? userOrders.map((o, i) => (
+                <div key={`my-order-list-${o.id || i}`} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 mx-2 space-y-4 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                   {/* Header */}
                   <div className="flex items-center justify-between border-b border-slate-50 pb-3">
@@ -1577,8 +1574,8 @@ export default function App() {
                   { q: 'How do I add money to my wallet?', a: 'You can add money through various payment methods including bKash, Nagad, and bank transfers.' },
                   { q: 'What are your business hours?', a: 'We provide support from 9:00 AM to 11:59 PM (GMT+6) every day of the week.' },
                   { q: 'How long does order processing take?', a: 'Most orders are processed within 5-10 minutes. For instant top-ups, you\'ll receive confirmation immediately.' }
-                ].map((faq, i) => (
-                  <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-3">
+                ].map((faq) => (
+                  <div key={faq.q} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-3">
                     <div className="font-black text-indigo-950">{faq.q}</div>
                     <p className="text-xs text-slate-500 font-bold leading-relaxed">{faq.a}</p>
                   </div>
@@ -1627,8 +1624,8 @@ export default function App() {
               </div>
 
               <div className="divide-y divide-slate-50">
-                {userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).length > 0 ? userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).map(o => (
-                  <div key={o.id} className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors">
+                {userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).length > 0 ? userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).map((o, i) => (
+                  <div key={`transaction-item-${o.id || i}`} className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors">
                     <div className="flex items-center gap-6 w-full md:w-auto">
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
                         o.status === 'Completed' ? 'bg-green-50 text-green-600' :
@@ -1734,8 +1731,8 @@ export default function App() {
                 { label: 'Pending', value: orders.filter(o => o.status === 'Pending').length, icon: Clock, color: 'bg-orange-500' },
                 { label: 'Games', value: games.length, icon: Zap, color: 'bg-red-500' },
                 { label: 'Packages', value: packages.length, icon: Copy, color: 'bg-indigo-500' }
-              ].map((stat, i) => (
-                <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
                   <div className={`${stat.color} p-4 rounded-2xl text-white shadow-lg`}>
                     <stat.icon className="w-6 h-6" />
                   </div>
@@ -1789,8 +1786,8 @@ export default function App() {
                         o.transactionId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                         o.uid?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                         o.userId?.toLowerCase().includes(orderSearch.toLowerCase())
-                      ).map(o => (
-                        <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
+                      ).map((o, i) => (
+                        <tr key={`admin-order-desktop-${o.id || i}`} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-8">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
@@ -1837,8 +1834,8 @@ export default function App() {
                     o.transactionId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                     o.uid?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                     o.userId?.toLowerCase().includes(orderSearch.toLowerCase())
-                  ).map(o => (
-                    <div key={o.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                  ).map((o, i) => (
+                    <div key={`admin-order-mobile-${o.id || i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
@@ -1886,8 +1883,8 @@ export default function App() {
                   <button onClick={() => setEditGame({})} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-100 hover:scale-105 transition-all"><Plus className="w-5 h-5" /> Add New Game</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {games.map(g => (
-                    <div key={g.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
+                  {games.map((g, i) => (
+                    <div key={`admin-game-${g.id || i}`} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
                       <div className="relative h-48 rounded-[2rem] overflow-hidden mb-6">
                         <img src={g.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500" />
                         <div className="absolute top-4 right-4 flex gap-2">
@@ -1920,8 +1917,8 @@ export default function App() {
                       <tr><th className="p-8">Game</th><th className="p-8">Package Details</th><th className="p-8">Price</th><th className="p-8 text-right">Actions</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {packages.map(p => (
-                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                      {packages.map((p, i) => (
+                        <tr key={`admin-package-${p.id || i}`} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-8">
                             <div className="flex items-center gap-4">
                               <img src={games.find(g => g.id === p.gameId)?.image} className="w-10 h-10 rounded-xl object-cover" />
@@ -2027,8 +2024,8 @@ export default function App() {
                       <tr><th className="p-8">User Profile</th><th className="p-8">Wallet Balance</th><th className="p-8">Activity</th><th className="p-8 text-right">Actions</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {allUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                      {allUsers.map((u, i) => (
+                        <tr key={`user-directory-${u.id || i}`} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-8">
                             <div className="flex items-center gap-4">
                               <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-indigo-100">
@@ -2307,24 +2304,27 @@ export default function App() {
 
       {/* Modals */}
       <AnimatePresence>
-        {isAdminLoginModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-2xl">
-              <h2 className="text-2xl font-black text-center mb-8">Admin Access</h2>
-              <form onSubmit={handleAdminLogin} className="space-y-4">
-                <input type="text" placeholder="Username" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
-                <input type="password" placeholder="Password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
-                <button className="w-full bg-indigo-950 text-white py-4 rounded-xl font-black shadow-lg">Login as Admin</button>
-              </form>
-              <button onClick={() => setIsAdminLoginModalOpen(false)} className="w-full mt-4 text-sm font-bold text-slate-500">Close</button>
-            </motion.div>
-          </div>
-        )}
+        <Modal 
+          isOpen={isAdminLoginModalOpen} 
+          onClose={() => setIsAdminLoginModalOpen(false)}
+          title="Admin Access"
+          maxWidth="max-w-sm"
+        >
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <input type="text" placeholder="Username" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
+            <input type="password" placeholder="Password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
+            <button className="w-full bg-indigo-950 text-white py-4 rounded-xl font-black shadow-lg">Login as Admin</button>
+          </form>
+        </Modal>
 
-        {isOrderModalOpen && selectedPackage && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-md rounded-[3rem] overflow-hidden shadow-2xl relative">
-              <div className="bg-gradient-to-br from-red-600 to-red-500 p-10 text-white text-center relative">
+        <Modal
+          isOpen={isOrderModalOpen && !!selectedPackage}
+          onClose={() => { setIsOrderModalOpen(false); setView('payment-cancelled'); }}
+          maxWidth="max-w-md"
+        >
+          {selectedPackage && (
+            <div className="-mx-8 -mt-2">
+              <div className="bg-gradient-to-br from-red-600 to-red-500 p-10 text-white text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                   <Zap className="w-full h-full scale-150 -rotate-12" />
                 </div>
@@ -2332,7 +2332,7 @@ export default function App() {
                 <p className="text-xs font-bold opacity-80 tracking-widest uppercase">Complete your top-up securely</p>
               </div>
               
-              <div className="p-10 space-y-8">
+              <div className="p-8 space-y-8">
                 <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</span>
@@ -2393,167 +2393,168 @@ export default function App() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
+          )}
+        </Modal>
+        <Modal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          maxWidth="max-w-md"
+        >
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-red-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20 rotate-12 group">
+              <Zap className="w-10 h-10 text-white fill-current group-hover:scale-110 transition-transform" />
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black text-indigo-950 tracking-tighter">
+              {authMode === 'login' ? 'Welcome Back' : authMode === 'register' ? 'Create Account' : 'Reset Password'}
+            </h2>
+            <p className="text-slate-400 font-bold text-sm mt-2">
+              {authMode === 'login' ? 'Login to access your dashboard' : authMode === 'register' ? 'Join the elite gaming community' : 'Enter your email to reset password'}
+            </p>
           </div>
-        )}
-        {isAuthModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white p-8 md:p-12 rounded-[3.5rem] w-full max-w-md shadow-2xl relative overflow-hidden my-auto">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-indigo-600 to-red-500"></div>
-              <button onClick={() => setIsAuthModalOpen(false)} className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 z-10"><X className="w-5 h-5" /></button>
-              
-              <div className="text-center mb-10">
-                <div className="w-20 h-20 bg-red-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20 rotate-12 group">
-                  <Zap className="w-10 h-10 text-white fill-current group-hover:scale-110 transition-transform" />
-                </div>
-                <h2 className="text-3xl md:text-4xl font-black text-indigo-950 tracking-tighter">
-                  {authMode === 'login' ? 'Welcome Back' : authMode === 'register' ? 'Create Account' : 'Reset Password'}
-                </h2>
-                <p className="text-slate-400 font-bold text-sm mt-2">
-                  {authMode === 'login' ? 'Login to access your dashboard' : authMode === 'register' ? 'Join the elite gaming community' : 'Enter your email to reset password'}
-                </p>
-              </div>
 
-              <div className="space-y-6">
-                {authMode !== 'forgot' && (
-                  <>
-                    {authError && (
-                      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        {authError}
-                      </motion.div>
-                    )}
-                    <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 border-2 border-slate-100 p-4 rounded-2xl font-black text-indigo-950 hover:bg-slate-50 transition-all hover:border-indigo-100">
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
-                      Continue with Google
-                    </button>
-                    
-                    <div className="relative flex items-center justify-center">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-                      <span className="relative bg-white px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Email Login</span>
-                    </div>
-                  </>
-                )}
-
-                {authMode === 'forgot' && authError && (
+          <div className="space-y-6">
+            {authMode !== 'forgot' && (
+              <>
+                {authError && (
                   <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     {authError}
                   </motion.div>
                 )}
+                <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 border-2 border-slate-100 p-4 rounded-2xl font-black text-indigo-950 hover:bg-slate-50 transition-all hover:border-indigo-100">
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
+                  Continue with Google
+                </button>
+                
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                  <span className="relative bg-white px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Email Login</span>
+                </div>
+              </>
+            )}
 
-                <form onSubmit={handleAuth} className="space-y-4">
-                  {authMode === 'register' && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Full Name</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input type="text" placeholder="Enter your name" value={name} onChange={e => setName(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Email Address</label>
-                    <div className="relative">
-                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input type="email" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
-                    </div>
+            {authMode === 'forgot' && authError && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {authError}
+              </motion.div>
+            )}
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              {authMode === 'register' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input type="text" placeholder="Enter your name" value={name} onChange={e => setName(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
                   </div>
-                  {authMode !== 'forgot' && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center ml-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase">Password</label>
-                        {authMode === 'login' && (
-                          <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Forgot?</button>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
-                      </div>
-                    </div>
-                  )}
-                  <button className="w-full bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAuthLoading}>
-                    {isAuthLoading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Processing...
-                      </div>
-                    ) : (
-                      authMode === 'login' ? 'Sign In Now' : authMode === 'register' ? 'Create My Account' : 'Send Reset Link'
-                    )}
-                  </button>
-                </form>
+                </div>
+              )}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Email Address</label>
+                <div className="relative">
+                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input type="email" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
+                </div>
               </div>
+              {authMode !== 'forgot' && (
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase">Password</label>
+                    {authMode === 'login' && (
+                      <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Forgot?</button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
+                  </div>
+                </div>
+              )}
+              <button className="w-full bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAuthLoading}>
+                {isAuthLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  authMode === 'login' ? 'Sign In Now' : authMode === 'register' ? 'Create My Account' : 'Send Reset Link'
+                )}
+              </button>
+            </form>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-sm font-bold text-slate-500 hover:text-red-500 transition-colors">
+              {authMode === 'login' ? "Don't have an account? " : authMode === 'register' ? "Already have an account? " : "Back to "}
+              <span className="text-red-500 font-black">{authMode === 'login' ? 'Register' : 'Login'}</span>
+            </button>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={!!editGame}
+          onClose={() => setEditGame(null)}
+          title="Edit Game"
+          maxWidth="max-w-md"
+        >
+          {editGame && (
+            <div className="space-y-4">
+              <input placeholder="Name" value={editGame.name || ''} onChange={e => setEditGame({...editGame, name: e.target.value})} className="w-full border p-3 rounded-xl" />
+              <input placeholder="Image URL" value={editGame.image || ''} onChange={e => setEditGame({...editGame, image: e.target.value})} className="w-full border p-3 rounded-xl" />
+              <input placeholder="Category" value={editGame.category || ''} onChange={e => setEditGame({...editGame, category: e.target.value})} className="w-full border p-3 rounded-xl" />
               
-              <div className="mt-8 text-center">
-                <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-sm font-bold text-slate-500 hover:text-red-500 transition-colors">
-                  {authMode === 'login' ? "Don't have an account? " : authMode === 'register' ? "Already have an account? " : "Back to "}
-                  <span className="text-red-500 font-black">{authMode === 'login' ? 'Register' : 'Login'}</span>
+              <div className="relative">
+                <textarea 
+                  placeholder="Description (Optional)" 
+                  value={editGame.description || ''} 
+                  onChange={e => setEditGame({...editGame, description: e.target.value})} 
+                  className="w-full border p-3 rounded-xl h-24 text-sm"
+                />
+                <button 
+                  onClick={generateGameDescription}
+                  disabled={isGenerating}
+                  className="absolute bottom-2 right-2 bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-colors disabled:opacity-50"
+                  title="Generate with AI"
+                >
+                  {isGenerating ? <div className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full" /> : <Sparkles className="w-4 h-4" />}
                 </button>
               </div>
-            </motion.div>
-          </div>
-        )}
 
-        {editGame && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
-            <div className="bg-white p-8 rounded-[2rem] w-full max-w-md">
-              <h2 className="text-xl font-black mb-6">Edit Game</h2>
-              <div className="space-y-4">
-                <input placeholder="Name" value={editGame.name || ''} onChange={e => setEditGame({...editGame, name: e.target.value})} className="w-full border p-3 rounded-xl" />
-                <input placeholder="Image URL" value={editGame.image || ''} onChange={e => setEditGame({...editGame, image: e.target.value})} className="w-full border p-3 rounded-xl" />
-                <input placeholder="Category" value={editGame.category || ''} onChange={e => setEditGame({...editGame, category: e.target.value})} className="w-full border p-3 rounded-xl" />
-                
-                <div className="relative">
-                  <textarea 
-                    placeholder="Description (Optional)" 
-                    value={editGame.description || ''} 
-                    onChange={e => setEditGame({...editGame, description: e.target.value})} 
-                    className="w-full border p-3 rounded-xl h-24 text-sm"
-                  />
-                  <button 
-                    onClick={generateGameDescription}
-                    disabled={isGenerating}
-                    className="absolute bottom-2 right-2 bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-colors disabled:opacity-50"
-                    title="Generate with AI"
-                  >
-                    {isGenerating ? <div className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full" /> : <Sparkles className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                <button onClick={adminSaveGame} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
-              </div>
+              <button onClick={adminSaveGame} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
 
-        {editPkg && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
-            <div className="bg-white p-8 rounded-[2rem] w-full max-w-md">
-              <h2 className="text-xl font-black mb-6">Edit Package</h2>
-              <div className="space-y-4">
-                <select value={editPkg.gameId || ''} onChange={e => setEditPkg({...editPkg, gameId: e.target.value})} className="w-full border p-3 rounded-xl">
-                  <option value="">Select Game</option>{games.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-                <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
-                <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
-                <input placeholder="Price" type="number" value={editPkg.price === undefined || isNaN(editPkg.price as number) ? '' : editPkg.price} onChange={e => setEditPkg({...editPkg, price: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
-                <div className="flex items-center gap-3 p-3 border rounded-xl">
-                  <input 
-                    type="checkbox" 
-                    id="inStock"
-                    checked={editPkg.inStock !== false} 
-                    onChange={e => setEditPkg({...editPkg, inStock: e.target.checked})} 
-                    className="w-5 h-5 accent-indigo-600"
-                  />
-                  <label htmlFor="inStock" className="text-sm font-bold text-slate-700">In Stock</label>
-                </div>
-                <button onClick={adminSavePkg} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
+        <Modal
+          isOpen={!!editPkg}
+          onClose={() => setEditPkg(null)}
+          title="Edit Package"
+          maxWidth="max-w-md"
+        >
+          {editPkg && (
+            <div className="space-y-4">
+              <select value={editPkg.gameId || ''} onChange={e => setEditPkg({...editPkg, gameId: e.target.value})} className="w-full border p-3 rounded-xl">
+                <option value="">Select Game</option>{games.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
+              <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
+              <input placeholder="Price" type="number" value={editPkg.price === undefined || isNaN(editPkg.price as number) ? '' : editPkg.price} onChange={e => setEditPkg({...editPkg, price: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
+              <div className="flex items-center gap-3 p-3 border rounded-xl">
+                <input 
+                  type="checkbox" 
+                  id="inStock"
+                  checked={editPkg.inStock !== false} 
+                  onChange={e => setEditPkg({...editPkg, inStock: e.target.checked})} 
+                  className="w-5 h-5 accent-indigo-600"
+                />
+                <label htmlFor="inStock" className="text-sm font-bold text-slate-700">In Stock</label>
               </div>
+              <button onClick={adminSavePkg} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
       </AnimatePresence>
       
       <AIChatbot />
