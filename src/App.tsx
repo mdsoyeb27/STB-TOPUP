@@ -74,7 +74,8 @@ interface Package { id: string; gameId: string; name: string; amount: string; pr
 interface Order { 
   id: string; userId: string; userEmail: string; uid: string; accountType: string; 
   gameName: string; packageName: string; paymentMethod: string; transactionId: string; 
-  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled'; timestamp: number; 
+  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled'; timestamp: number;
+  price: number;
 }
 interface SiteSettings {
   notice: string;
@@ -95,6 +96,7 @@ interface SiteSettings {
   siteLogo: string;
   selectedPackageColor?: string;
   stockOutColor?: string;
+  priceColor?: string;
 }
 interface UserProfile {
   name: string;
@@ -130,7 +132,8 @@ export default function App() {
     siteName: 'STB TOPUP',
     siteLogo: 'https://ui-avatars.com/api/?name=STB&background=6366f1&color=fff&size=128',
     selectedPackageColor: '#eff6ff', // bg-blue-50
-    stockOutColor: '#f8fafc' // bg-slate-50
+    stockOutColor: '#f8fafc', // bg-slate-50
+    priceColor: '#ef4444' // text-red-500
   });
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
@@ -165,14 +168,18 @@ export default function App() {
 
   // Real-time Latest Orders
   useEffect(() => {
-    const combined = orders.map(o => ({
-      id: o.id,
-      name: o.userEmail.split('@')[0],
-      item: o.packageName,
-      price: `${packages.find(p => p.name === o.packageName)?.price || 'N/A'}৳`,
-      status: o.status,
-      timestamp: o.timestamp
-    })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+    const combined = orders.map(o => {
+      const pkgName = o.packageName.split(' ').slice(1).join(' ');
+      const pkgPrice = packages.find(p => p.name === pkgName)?.price;
+      return {
+        id: o.id,
+        name: o.userEmail.split('@')[0],
+        item: o.packageName,
+        price: `${o.price || pkgPrice || 'N/A'}৳`,
+        status: o.status,
+        timestamp: o.timestamp
+      };
+    }).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
     
     setRealTimeLatestOrders(combined);
   }, [orders, packages]);
@@ -529,6 +536,7 @@ export default function App() {
       <AnimatePresence>
         {siteSettings.notice && (
           <motion.div 
+            key="notice-bar"
             initial={{ height: 0, opacity: 0 }} 
             animate={{ height: 'auto', opacity: 1 }} 
             exit={{ height: 0, opacity: 0 }}
@@ -562,7 +570,7 @@ export default function App() {
               </div>
               <div>
                 <span className="text-xl font-black text-indigo-950 tracking-tighter leading-none block">STB</span>
-                <span className="text-[10px] font-black text-red-500 tracking-[0.2em] leading-none block">TOPUP</span>
+                <span className="text-xs font-black text-red-500 tracking-[0.2em] leading-none block">TOPUP</span>
               </div>
             </div>
           </div>
@@ -599,6 +607,7 @@ export default function App() {
         {isSidebarOpen && (
           <>
             <motion.div 
+              key="sidebar-backdrop"
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
@@ -606,6 +615,7 @@ export default function App() {
               className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm" 
             />
             <motion.div 
+              key="sidebar-content"
               initial={{ x: '-100%' }} 
               animate={{ x: 0 }} 
               exit={{ x: '-100%' }} 
@@ -680,8 +690,8 @@ export default function App() {
             </section>
 
             {/* Categories */}
-            {Array.from(new Set(games.map(g => g.category))).map(cat => (
-              <div key={cat || 'uncategorized'} className="space-y-4">
+            {Array.from(new Set(games.map(g => g.category))).map((cat, i) => (
+              <div key={cat || `uncategorized-${i}`} className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
                   <h2 className="text-lg font-black text-center text-slate-800 uppercase tracking-wider">{cat}</h2>
@@ -868,7 +878,7 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-slate-700">{p.amount} {p.name}</span>
                       </div>
-                      <div className="text-slate-900 font-black text-sm">৳{p.price}</div>
+                      <div className="font-black text-sm" style={{ color: siteSettings.priceColor || '#ef4444' }}>৳{p.price}</div>
                     </div>
                   ))
                 )}
@@ -1476,7 +1486,7 @@ export default function App() {
                           <CheckCircle className="w-3 h-3 text-green-500" />
                         </div>
                         <div className="text-xs font-bold text-slate-400 mt-0.5">
-                          {new Date(o.timestamp).toLocaleString()}
+                          {new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}
                         </div>
                       </div>
                     </div>
@@ -1509,7 +1519,7 @@ export default function App() {
                       </div>
                       <div className="flex-1">
                         <div className="text-[10px] font-bold text-slate-400 uppercase">Total Price</div>
-                        <div className="text-sm font-black text-green-600">৳{o.packageName.includes('Deposit') ? o.packageName.split(' ')[2] : packages.find(p => p.name === o.packageName.split(' ').slice(1).join(' '))?.price || 'N/A'}</div>
+                        <div className="text-sm font-black text-green-600">৳{o.price || packages.find(p => p.name === o.packageName.split(' ').slice(1).join(' '))?.price || 'N/A'}</div>
                       </div>
                     </div>
 
@@ -1777,7 +1787,7 @@ export default function App() {
                         <div className="text-[10px] text-slate-400 font-bold flex items-center gap-2 mt-1">
                           <Hash className="w-3 h-3" /> Trx: {o.transactionId || 'N/A'}
                           <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                          <Clock className="w-3 h-3" /> {new Date(o.timestamp).toLocaleString()}
+                          <Clock className="w-3 h-3" /> {new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}
                         </div>
                       </div>
                     </div>
@@ -1906,25 +1916,43 @@ export default function App() {
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400">
-                      <tr><th className="p-8">Customer & Game</th><th className="p-8">Payment Details</th><th className="p-8">Status</th><th className="p-8 text-right">Actions</th></tr>
+                      <tr><th className="p-8">Order Info</th><th className="p-8">Customer & Game</th><th className="p-8">Payment Details</th><th className="p-8">Status</th><th className="p-8 text-right">Actions</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {orders.filter(o => 
-                        o.userEmail?.toLowerCase().includes(orderSearch.toLowerCase()) || 
-                        o.transactionId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        o.uid?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        o.userId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        o.phoneNumber?.toLowerCase().includes(orderSearch.toLowerCase())
-                      ).map((o, i) => (
+                      {orders.filter(o => {
+                        const orderUser = allUsers.find(u => u.id === o.userId);
+                        return (
+                          o.userEmail?.toLowerCase().includes(orderSearch.toLowerCase()) || 
+                          o.transactionId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.uid?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.userId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.phoneNumber?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          o.id?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                          orderUser?.supportPin?.includes(orderSearch) ||
+                          orderUser?.name?.toLowerCase().includes(orderSearch.toLowerCase())
+                        );
+                      }).map((o, i) => (
                         <tr key={`admin-order-desktop-${o.id}-${i}`} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-8">
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order ID</div>
+                              <div className="font-mono text-xs font-black text-indigo-950 bg-slate-100 px-2 py-1 rounded w-fit select-all">#{o.id}</div>
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Player ID</div>
+                              <div className="font-mono text-xs font-black text-slate-600 bg-slate-50 px-2 py-1 rounded w-fit select-all">{o.uid || 'N/A'}</div>
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">User ID</div>
+                              <div className="font-mono text-xs font-black text-red-500 bg-red-50 px-2 py-1 rounded w-fit select-all">{allUsers.find(u => u.id === o.userId)?.supportPin || 'N/A'}</div>
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Time</div>
+                              <div className="font-mono text-xs font-black text-slate-600 bg-slate-50 px-2 py-1 rounded w-fit">{new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</div>
+                            </div>
+                          </td>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
                               <div>
-                                <div className="font-black text-indigo-950 text-sm">{o.userEmail}</div>
-                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{o.gameName} • {o.packageName}</div>
+                                <div className="font-black text-indigo-950 text-sm">{allUsers.find(u => u.id === o.userId)?.name || 'Unknown User'}</div>
+                                <div className="text-[10px] text-slate-400 font-bold">{o.userEmail}</div>
+                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{o.gameName} • {o.packageName}</div>
                                 <div className="text-[10px] text-slate-500 font-bold mt-0.5">Phone: {o.phoneNumber || 'N/A'}</div>
-                                <div className="text-[10px] text-red-500 font-black mt-1">ID: {o.uid}</div>
                               </div>
                             </div>
                           </td>
@@ -1934,7 +1962,7 @@ export default function App() {
                                 <Wallet className="w-4 h-4 text-red-500" />
                               </div>
                               <div>
-                                <div className="text-xs font-black text-indigo-950">{o.paymentMethod}</div>
+                                <div className="text-xs font-black text-indigo-950">{o.paymentMethod} • ৳{o.price || packages.find(p => p.name === o.packageName.split(' ').slice(1).join(' '))?.price || 'N/A'}</div>
                                 <div className="text-[10px] font-mono text-slate-400 font-bold">{o.transactionId}</div>
                               </div>
                             </div>
@@ -1973,7 +2001,8 @@ export default function App() {
                           <div>
                             <div className="font-black text-indigo-950 text-xs">{o.userEmail}</div>
                             <div className="text-[10px] text-slate-500 font-bold">Phone: {o.phoneNumber || 'N/A'}</div>
-                            <div className="text-[10px] text-slate-400 font-bold">{new Date(o.timestamp).toLocaleDateString()}</div>
+                            <div className="text-[10px] text-slate-400 font-bold">{new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</div>
+                            <div className="text-[10px] text-slate-400 font-bold">Order #{o.id}</div>
                           </div>
                         </div>
                         <button onClick={() => remove(ref(db, `orders/${o.id}`))} className="text-red-400 p-2"><Trash2 className="w-4 h-4" /></button>
@@ -2170,6 +2199,13 @@ export default function App() {
                         <input type="text" value={siteSettings.stockOutColor || '#f8fafc'} onChange={e => setSiteSettings({...siteSettings, stockOutColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Price Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={siteSettings.priceColor || '#ef4444'} onChange={e => setSiteSettings({...siteSettings, priceColor: e.target.value})} className="w-12 h-12 rounded-xl cursor-pointer border-2 border-slate-100 p-1" />
+                        <input type="text" value={siteSettings.priceColor || '#ef4444'} onChange={e => setSiteSettings({...siteSettings, priceColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => set(ref(db, 'settings'), siteSettings)} className="bg-indigo-600 text-white px-12 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-[1.02] transition-all">Update Platform Settings</button>
@@ -2184,7 +2220,7 @@ export default function App() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400">
-                      <tr><th className="p-8">User Profile</th><th className="p-8">Wallet Balance</th><th className="p-8">Activity</th><th className="p-8 text-right">Actions</th></tr>
+                      <tr><th className="p-8">User Profile</th><th className="p-8">User ID</th><th className="p-8">Wallet Balance</th><th className="p-8">Activity</th><th className="p-8 text-right">Actions</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {allUsers.map((u, i) => (
@@ -2199,6 +2235,9 @@ export default function App() {
                                 <div className="text-[10px] text-slate-400 font-bold">{u.email || 'No Email'}</div>
                               </div>
                             </div>
+                          </td>
+                          <td className="p-8">
+                            <div className="font-mono text-xs font-black text-indigo-950 bg-slate-100 px-2 py-1 rounded w-fit select-all">{u.supportPin || 'N/A'}</div>
                           </td>
                           <td className="p-8">
                             <div className="text-lg font-black text-red-500">৳{u.balance || 0}</div>
@@ -2466,265 +2505,268 @@ export default function App() {
       </footer>
 
       {/* Modals */}
-      <AnimatePresence>
-        <Modal 
-          isOpen={isAdminLoginModalOpen} 
-          onClose={() => setIsAdminLoginModalOpen(false)}
-          title="Admin Access"
-          maxWidth="max-w-sm"
-        >
-          <form onSubmit={handleAdminLogin} className="space-y-4">
-            <input type="text" placeholder="Username" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
-            <input type="password" placeholder="Password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
-            <button className="w-full bg-indigo-950 text-white py-4 rounded-xl font-black shadow-lg">Login as Admin</button>
-          </form>
-        </Modal>
+      <Modal 
+        key="admin-login-modal"
+        isOpen={isAdminLoginModalOpen} 
+        onClose={() => setIsAdminLoginModalOpen(false)}
+        title="Admin Access"
+        maxWidth="max-w-sm"
+      >
+        <form onSubmit={handleAdminLogin} className="space-y-4">
+          <input type="text" placeholder="Username" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
+          <input type="password" placeholder="Password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full border p-4 rounded-xl font-bold" />
+          <button className="w-full bg-indigo-950 text-white py-4 rounded-xl font-black shadow-lg">Login as Admin</button>
+        </form>
+      </Modal>
 
-        <Modal
-          isOpen={isOrderModalOpen && !!selectedPackage}
-          onClose={() => { setIsOrderModalOpen(false); setView('payment-cancelled'); }}
-          maxWidth="max-w-md"
-        >
-          {selectedPackage && (
-            <div className="-mx-8 -mt-2">
-              <div className="bg-gradient-to-br from-red-600 to-red-500 p-10 text-white text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                  <Zap className="w-full h-full scale-150 -rotate-12" />
-                </div>
-                <h3 className="text-3xl font-black mb-2">Checkout</h3>
-                <p className="text-xs font-bold opacity-80 tracking-widest uppercase">Complete your top-up securely</p>
+      <Modal
+        key="order-modal"
+        isOpen={isOrderModalOpen && !!selectedPackage}
+        onClose={() => { setIsOrderModalOpen(false); setView('payment-cancelled'); }}
+        maxWidth="max-w-md"
+      >
+        {selectedPackage && (
+          <div className="-mx-8 -mt-2">
+            <div className="bg-gradient-to-br from-red-600 to-red-500 p-10 text-white text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                <Zap className="w-full h-full scale-150 -rotate-12" />
               </div>
-              
-              <div className="p-8 space-y-8">
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</span>
-                    <span className="text-sm font-black text-indigo-950">{selectedGame?.name}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Package</span>
-                    <span className="text-sm font-black text-indigo-950">{selectedPackage.amount} {selectedPackage.name}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Player ID</span>
-                    <span className="text-sm font-black text-red-500 bg-red-50 px-3 py-1 rounded-lg">{uid}</span>
-                  </div>
-                  <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <span className="text-xs font-black text-indigo-950">Total Amount</span>
-                    <span className="text-2xl font-black text-red-500">৳{selectedPackage.price}</span>
-                  </div>
+              <h3 className="text-3xl font-black mb-2">Checkout</h3>
+              <p className="text-xs font-bold opacity-80 tracking-widest uppercase">Complete your top-up securely</p>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</span>
+                  <span className="text-sm font-black text-indigo-950">{selectedGame?.name}</span>
                 </div>
-
-                {paymentType === 'instant' ? (
-                  <div className="space-y-6">
-                    <div className="bg-indigo-950 p-6 rounded-[2rem] text-white relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-all duration-700"></div>
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">{paymentMethod} Personal</span>
-                        <button onClick={() => copyToClipboard(
-                          paymentMethod === 'Bkash' ? siteSettings.bkashNumber :
-                          paymentMethod === 'Nagad' ? siteSettings.nagadNumber :
-                          paymentMethod === 'Rocket' ? siteSettings.rocketNumber :
-                          siteSettings.upayNumber
-                        )} className="text-[10px] font-black flex items-center gap-1 hover:text-red-400 transition-colors bg-white/10 px-3 py-1 rounded-full"><Copy className="w-3 h-3" /> Copy</button>
-                      </div>
-                      <div className="text-3xl font-black text-center tracking-[0.2em]">
-                        {paymentMethod === 'Bkash' ? siteSettings.bkashNumber :
-                         paymentMethod === 'Nagad' ? siteSettings.nagadNumber :
-                         paymentMethod === 'Rocket' ? siteSettings.rocketNumber :
-                         siteSettings.upayNumber}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Your Phone Number</label>
-                        <input type="text" placeholder="Enter your phone number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Transaction ID (TrxID)</label>
-                        <input type="text" placeholder="Enter 10-digit TrxID" value={trxId} onChange={e => setTrxId(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-orange-50 p-6 rounded-[2rem] border-2 border-dashed border-orange-200 text-center space-y-2">
-                    <Wallet className="w-10 h-10 text-orange-500 mx-auto" />
-                    <div className="text-sm font-black text-indigo-950">Wallet Payment</div>
-                    <p className="text-[10px] font-bold text-slate-500">৳{selectedPackage.price} will be deducted from your balance.</p>
-                  </div>
-                )}
-
-                <div className="flex gap-4">
-                  <button onClick={() => { setIsOrderModalOpen(false); setView('payment-cancelled'); }} className="flex-1 py-5 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
-                  <button onClick={handleOrder} disabled={isSubmitting} className="flex-[2] bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
-                    {isSubmitting ? 'Processing...' : 'Confirm Order'}
-                  </button>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Package</span>
+                  <span className="text-sm font-black text-indigo-950">{selectedPackage.amount} {selectedPackage.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Player ID</span>
+                  <span className="text-sm font-black text-red-500 bg-red-50 px-3 py-1 rounded-lg">{uid}</span>
+                </div>
+                <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                  <span className="text-xs font-black text-indigo-950">Total Amount</span>
+                  <span className="text-2xl font-black text-red-500">৳{selectedPackage.price}</span>
                 </div>
               </div>
-            </div>
-          )}
-        </Modal>
-        <Modal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          maxWidth="max-w-md"
-        >
-          <div className="text-center mb-10">
-            <div className="w-20 h-20 bg-red-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20 rotate-12 group">
-              <Zap className="w-10 h-10 text-white fill-current group-hover:scale-110 transition-transform" />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-black text-indigo-950 tracking-tighter">
-              {authMode === 'login' ? 'Welcome Back' : authMode === 'register' ? 'Create Account' : 'Reset Password'}
-            </h2>
-            <p className="text-slate-400 font-bold text-sm mt-2">
-              {authMode === 'login' ? 'Login to access your dashboard' : authMode === 'register' ? 'Join the elite gaming community' : 'Enter your email to reset password'}
-            </p>
-          </div>
 
-          <div className="space-y-6">
-            {authMode !== 'forgot' && (
-              <>
-                {authError && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    {authError}
-                  </motion.div>
-                )}
-                <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 border-2 border-slate-100 p-4 rounded-2xl font-black text-indigo-950 hover:bg-slate-50 transition-all hover:border-indigo-100">
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
-                  Continue with Google
+              {paymentType === 'instant' ? (
+                <div className="space-y-6">
+                  <div className="bg-indigo-950 p-6 rounded-[2rem] text-white relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-all duration-700"></div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">{paymentMethod} Personal</span>
+                      <button onClick={() => copyToClipboard(
+                        paymentMethod === 'Bkash' ? siteSettings.bkashNumber :
+                        paymentMethod === 'Nagad' ? siteSettings.nagadNumber :
+                        paymentMethod === 'Rocket' ? siteSettings.rocketNumber :
+                        siteSettings.upayNumber
+                      )} className="text-[10px] font-black flex items-center gap-1 hover:text-red-400 transition-colors bg-white/10 px-3 py-1 rounded-full"><Copy className="w-3 h-3" /> Copy</button>
+                    </div>
+                    <div className="text-3xl font-black text-center tracking-[0.2em]">
+                      {paymentMethod === 'Bkash' ? siteSettings.bkashNumber :
+                       paymentMethod === 'Nagad' ? siteSettings.nagadNumber :
+                       paymentMethod === 'Rocket' ? siteSettings.rocketNumber :
+                       siteSettings.upayNumber}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Your Phone Number</label>
+                      <input type="text" placeholder="Enter your phone number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Transaction ID (TrxID)</label>
+                      <input type="text" placeholder="Enter 10-digit TrxID" value={trxId} onChange={e => setTrxId(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-orange-50 p-6 rounded-[2rem] border-2 border-dashed border-orange-200 text-center space-y-2">
+                  <Wallet className="w-10 h-10 text-orange-500 mx-auto" />
+                  <div className="text-sm font-black text-indigo-950">Wallet Payment</div>
+                  <p className="text-[10px] font-bold text-slate-500">৳{selectedPackage.price} will be deducted from your balance.</p>
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button onClick={() => { setIsOrderModalOpen(false); setView('payment-cancelled'); }} className="flex-1 py-5 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
+                <button onClick={handleOrder} disabled={isSubmitting} className="flex-[2] bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+                  {isSubmitting ? 'Processing...' : 'Confirm Order'}
                 </button>
-                
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-                  <span className="relative bg-white px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Email Login</span>
-                </div>
-              </>
-            )}
-
-            {authMode === 'forgot' && authError && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {authError}
-              </motion.div>
-            )}
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              {authMode === 'register' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input type="text" placeholder="Enter your name" value={name} onChange={e => setName(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
-                  </div>
-                </div>
-              )}
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Email Address</label>
-                <div className="relative">
-                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input type="email" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
-                </div>
               </div>
-              {authMode !== 'forgot' && (
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center ml-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase">Password</label>
-                    {authMode === 'login' && (
-                      <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Forgot?</button>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
-                  </div>
-                </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+      <Modal
+        key="auth-modal"
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-red-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20 rotate-12 group">
+            <Zap className="w-10 h-10 text-white fill-current group-hover:scale-110 transition-transform" />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black text-indigo-950 tracking-tighter">
+            {authMode === 'login' ? 'Welcome Back' : authMode === 'register' ? 'Create Account' : 'Reset Password'}
+          </h2>
+          <p className="text-slate-400 font-bold text-sm mt-2">
+            {authMode === 'login' ? 'Login to access your dashboard' : authMode === 'register' ? 'Join the elite gaming community' : 'Enter your email to reset password'}
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {authMode !== 'forgot' && (
+            <>
+              {authError && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {authError}
+                </motion.div>
               )}
-              <button className="w-full bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAuthLoading}>
-                {isAuthLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Processing...
-                  </div>
-                ) : (
-                  authMode === 'login' ? 'Sign In Now' : authMode === 'register' ? 'Create My Account' : 'Send Reset Link'
-                )}
+              <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 border-2 border-slate-100 p-4 rounded-2xl font-black text-indigo-950 hover:bg-slate-50 transition-all hover:border-indigo-100">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
+                Continue with Google
               </button>
-            </form>
-          </div>
-          
-          <div className="mt-8 text-center">
-            <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-sm font-bold text-slate-500 hover:text-red-500 transition-colors">
-              {authMode === 'login' ? "Don't have an account? " : authMode === 'register' ? "Already have an account? " : "Back to "}
-              <span className="text-red-500 font-black">{authMode === 'login' ? 'Register' : 'Login'}</span>
-            </button>
-          </div>
-        </Modal>
-
-        <Modal
-          isOpen={!!editGame}
-          onClose={() => setEditGame(null)}
-          title="Edit Game"
-          maxWidth="max-w-md"
-        >
-          {editGame && (
-            <div className="space-y-4">
-              <input placeholder="Name" value={editGame.name || ''} onChange={e => setEditGame({...editGame, name: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <input placeholder="Image URL" value={editGame.image || ''} onChange={e => setEditGame({...editGame, image: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <input placeholder="Category" value={editGame.category || ''} onChange={e => setEditGame({...editGame, category: e.target.value})} className="w-full border p-3 rounded-xl" />
               
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                <span className="relative bg-white px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Email Login</span>
+              </div>
+            </>
+          )}
+
+          {authMode === 'forgot' && authError && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {authError}
+            </motion.div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            {authMode === 'register' && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input type="text" placeholder="Enter your name" value={name} onChange={e => setName(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
+                </div>
+              </div>
+            )}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Email Address</label>
               <div className="relative">
-                <textarea 
-                  placeholder="Description (Optional)" 
-                  value={editGame.description || ''} 
-                  onChange={e => setEditGame({...editGame, description: e.target.value})} 
-                  className="w-full border p-3 rounded-xl h-24 text-sm"
-                />
-                <button 
-                  onClick={generateGameDescription}
-                  disabled={isGenerating}
-                  className="absolute bottom-2 right-2 bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-colors disabled:opacity-50"
-                  title="Generate with AI"
-                >
-                  {isGenerating ? <div className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full" /> : <Sparkles className="w-4 h-4" />}
-                </button>
+                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input type="email" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
               </div>
-
-              <button onClick={adminSaveGame} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
             </div>
-          )}
-        </Modal>
-
-        <Modal
-          isOpen={!!editPkg}
-          onClose={() => setEditPkg(null)}
-          title="Edit Package"
-          maxWidth="max-w-md"
-        >
-          {editPkg && (
-            <div className="space-y-4">
-              <select value={editPkg.gameId || ''} onChange={e => setEditPkg({...editPkg, gameId: e.target.value})} className="w-full border p-3 rounded-xl">
-                <option value="">Select Game</option>{games.map((g, i) => <option key={`game-opt-${g.id}-${i}`} value={g.id}>{g.name}</option>)}
-              </select>
-              <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <input placeholder="Price" type="number" value={editPkg.price === undefined || isNaN(editPkg.price as number) ? '' : editPkg.price} onChange={e => setEditPkg({...editPkg, price: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
-              <div className="flex items-center gap-3 p-3 border rounded-xl">
-                <input 
-                  type="checkbox" 
-                  id="inStock"
-                  checked={editPkg.inStock !== false} 
-                  onChange={e => setEditPkg({...editPkg, inStock: e.target.checked})} 
-                  className="w-5 h-5 accent-indigo-600"
-                />
-                <label htmlFor="inStock" className="text-sm font-bold text-slate-700">In Stock</label>
+            {authMode !== 'forgot' && (
+              <div className="space-y-1">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase">Password</label>
+                  {authMode === 'login' && (
+                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Forgot?</button>
+                  )}
+                </div>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-2 border-slate-100 p-4 pl-12 rounded-2xl font-bold focus:border-red-500 outline-none transition-all" required />
+                </div>
               </div>
-              <button onClick={adminSavePkg} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
+            )}
+            <button className="w-full bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAuthLoading}>
+              {isAuthLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : (
+                authMode === 'login' ? 'Sign In Now' : authMode === 'register' ? 'Create My Account' : 'Send Reset Link'
+              )}
+            </button>
+          </form>
+        </div>
+        
+        <div className="mt-8 text-center">
+          <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-sm font-bold text-slate-500 hover:text-red-500 transition-colors">
+            {authMode === 'login' ? "Don't have an account? " : authMode === 'register' ? "Already have an account? " : "Back to "}
+            <span className="text-red-500 font-black">{authMode === 'login' ? 'Register' : 'Login'}</span>
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        key="edit-game-modal"
+        isOpen={!!editGame}
+        onClose={() => setEditGame(null)}
+        title="Edit Game"
+        maxWidth="max-w-md"
+      >
+        {editGame && (
+          <div className="space-y-4">
+            <input placeholder="Name" value={editGame.name || ''} onChange={e => setEditGame({...editGame, name: e.target.value})} className="w-full border p-3 rounded-xl" />
+            <input placeholder="Image URL" value={editGame.image || ''} onChange={e => setEditGame({...editGame, image: e.target.value})} className="w-full border p-3 rounded-xl" />
+            <input placeholder="Category" value={editGame.category || ''} onChange={e => setEditGame({...editGame, category: e.target.value})} className="w-full border p-3 rounded-xl" />
+            
+            <div className="relative">
+              <textarea 
+                placeholder="Description (Optional)" 
+                value={editGame.description || ''} 
+                onChange={e => setEditGame({...editGame, description: e.target.value})} 
+                className="w-full border p-3 rounded-xl h-24 text-sm"
+              />
+              <button 
+                onClick={generateGameDescription}
+                disabled={isGenerating}
+                className="absolute bottom-2 right-2 bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-colors disabled:opacity-50"
+                title="Generate with AI"
+              >
+                {isGenerating ? <div className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full" /> : <Sparkles className="w-4 h-4" />}
+              </button>
             </div>
-          )}
-        </Modal>
-      </AnimatePresence>
+
+            <button onClick={adminSaveGame} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        key="edit-pkg-modal"
+        isOpen={!!editPkg}
+        onClose={() => setEditPkg(null)}
+        title="Edit Package"
+        maxWidth="max-w-md"
+      >
+        {editPkg && (
+          <div className="space-y-4">
+            <select value={editPkg.gameId || ''} onChange={e => setEditPkg({...editPkg, gameId: e.target.value})} className="w-full border p-3 rounded-xl">
+              <option value="">Select Game</option>{games.map((g, i) => <option key={`game-opt-${g.id}-${i}`} value={g.id}>{g.name}</option>)}
+            </select>
+            <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
+            <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
+            <input placeholder="Price" type="number" value={editPkg.price === undefined || isNaN(editPkg.price as number) ? '' : editPkg.price} onChange={e => setEditPkg({...editPkg, price: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
+            <div className="flex items-center gap-3 p-3 border rounded-xl">
+              <input 
+                type="checkbox" 
+                id="inStock"
+                checked={editPkg.inStock !== false} 
+                onChange={e => setEditPkg({...editPkg, inStock: e.target.checked})} 
+                className="w-5 h-5 accent-indigo-600"
+              />
+              <label htmlFor="inStock" className="text-sm font-bold text-slate-700">In Stock</label>
+            </div>
+            <button onClick={adminSavePkg} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
+          </div>
+        )}
+      </Modal>
       
       <AIChatbot />
       <BottomNav view={view} setView={setView} setIsSidebarOpen={setIsSidebarOpen} />

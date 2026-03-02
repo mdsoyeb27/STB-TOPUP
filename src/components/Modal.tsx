@@ -38,6 +38,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className={`fixed inset-0 z-[100] flex ${isBottomSheet ? 'items-end md:items-center' : 'items-center'} justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm`}>
           {/* Backdrop for closing */}
           <motion.div 
+            key="modal-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -47,6 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Modal Content */}
           <motion.div
+            key="modal-content"
             initial={isBottomSheet ? { y: '100%' } : { scale: 0.9, opacity: 0 }}
             animate={isBottomSheet ? { y: 0 } : { scale: 1, opacity: 1 }}
             exit={isBottomSheet ? { y: '100%' } : { scale: 0.9, opacity: 0 }}
