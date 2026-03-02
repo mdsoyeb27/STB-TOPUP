@@ -69,7 +69,7 @@ const latestOrders = [
 ];
 
 // Types
-interface Game { id: string; name: string; image: string; category: string; description?: string; }
+interface Game { id: string; name: string; image: string; category: string; description?: string; isPremium?: boolean; }
 interface Package { 
   id: string; 
   gameId: string; 
@@ -107,6 +107,8 @@ interface SiteSettings {
   selectedPackageColor?: string;
   stockOutColor?: string;
   priceColor?: string;
+  premiumThreshold?: number;
+  loyaltyRules?: string;
 }
 interface UserProfile {
   name: string;
@@ -143,7 +145,21 @@ export default function App() {
     siteLogo: 'https://ui-avatars.com/api/?name=STB&background=6366f1&color=fff&size=128',
     selectedPackageColor: '#eff6ff', // bg-blue-50
     stockOutColor: '#f8fafc', // bg-slate-50
-    priceColor: '#ef4444' // text-red-500
+    priceColor: '#ef4444', // text-red-500
+    premiumThreshold: 10000,
+    loyaltyRules: `
+• Premium User Loyalty Discount
+যেসব গ্রাহক আমাদের কাছ থেকে মোট ১০,০০০ বা তার বেশি মূল্যের পণ্য ক্রয় করেছেন, তারা Premium User Loyalty Discount অফারটি পাওয়ার যোগ্য হবেন। নির্ধারিত পরিমাণ টাকার টপ-আপ সম্পন্ন হলে, আপনি পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট উপভোগ করতে পারবেন।
+• অফারের বিস্তারিত:
+• শুধুমাত্র বিশ্বস্ত গ্রাহকদের জন্য প্রিমিয়াম পুরস্কার
+• আমাদের থেকে মোট ১০,০০০+ টাকার কেনাকাটা থাকতে হবে
+• পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট প্রযোজ্য হবে
+• একজন গ্রাহক ২৪ ঘণ্টার মধ্যে যেকোনো সর্বোচ্চ ২টি প্যাকেজ অর্ডার করতে পারবেন
+• প্রচলিত শর্ত অনুযায়ী অফার কার্যকর হবে
+• শুধুমাত্র ভেরিফাইড গ্রাহকদের জন্য প্রযোজ্য
+• শর্তাবলী পরিবর্তনের অধিকার
+আমরা প্রয়োজনে এই অফারের শর্তাবলী, সুবিধা বা মেয়াদ যে কোনো সময় পূর্ব নোটিশ ছাড়াই পরিবর্তন, সংশোধন বা বাতিল করার অধিকার সংরক্ষণ করি। এই অফার সংক্রান্ত আমাদের সিদ্ধান্তই চূড়ান্ত বলে গণ্য হবে।
+    `.trim()
   });
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
@@ -866,6 +882,38 @@ export default function App() {
               </div>
             </div>
 
+            {/* Premium User Card */}
+            {selectedGame.isPremium && (
+              <div className="bg-white p-6 rounded-2xl border border-orange-100 shadow-sm space-y-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest">বিশেষ অফার</div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black text-indigo-950">এই প্রোডাক্টটি শুধু বিশেষ ইউজারদের জন্য আনলক হবে</h3>
+                    <p className="text-xs font-bold text-slate-400">আপনার অ্যাকাউন্ট থেকে মোট {siteSettings.premiumThreshold || 10000}৳ বা তার বেশি টপ-আপ করলেই এই অফারটি আপনার জন্য স্থায়ীভাবে আনলক হয়ে যাবে।</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">আপনার মোট খরচ: <span className="text-green-600">৳{userProfile.totalSpent || 0}</span></div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">আরও <span className="text-red-500">৳{Math.max(0, (siteSettings.premiumThreshold || 10000) - (userProfile.totalSpent || 0))}</span> টপ-আপ করলেই অফারটি আনলক হবে</div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    <span>প্রোগ্রেস</span>
+                    <span>{Math.min(100, Math.round(((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100))}%</span>
+                  </div>
+                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, ((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100)}%` }}
+                      className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full shadow-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 italic">একটু একটু করে টপ-আপ করলেই এই অফারটির জন্য <span className="text-indigo-600 font-black">LOYALTY ACCESS</span> আনলক হয়ে যাবে।</p>
+              </div>
+            )}
+
             {/* Step 1: Packages */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-4">
@@ -880,16 +928,23 @@ export default function App() {
                   packages.filter(p => p.gameId === selectedGame.id).map((p, i) => (
                     <div 
                       key={`package-item-${p.id}-${i}`} 
-                      onClick={() => p.inStock !== false && setSelectedPackage(p)} 
+                      onClick={() => {
+                        if (p.inStock === false) return;
+                        if (selectedGame.isPremium && (userProfile.totalSpent || 0) < (siteSettings.premiumThreshold || 10000)) {
+                          alert(`এই অফারটি আনলক করতে আপনার মোট খরচ ${siteSettings.premiumThreshold || 10000}৳ হতে হবে। বর্তমানে আপনার মোট খরচ ৳${userProfile.totalSpent || 0}`);
+                          return;
+                        }
+                        setSelectedPackage(p);
+                      }} 
                       className={`relative p-3 rounded-lg border flex items-center justify-between transition-all ${
-                        p.inStock === false 
+                        p.inStock === false || (selectedGame.isPremium && (userProfile.totalSpent || 0) < (siteSettings.premiumThreshold || 10000))
                           ? 'border-slate-100 opacity-60 grayscale cursor-not-allowed' 
                           : selectedPackage?.id === p.id 
                             ? 'border-blue-500 ring-1 ring-blue-500 cursor-pointer' 
                             : 'border-slate-200 hover:border-blue-300 cursor-pointer'
                       }`}
                       style={{
-                        backgroundColor: p.inStock === false 
+                        backgroundColor: p.inStock === false || (selectedGame.isPremium && (userProfile.totalSpent || 0) < (siteSettings.premiumThreshold || 10000))
                           ? (siteSettings.stockOutColor || '#f8fafc')
                           : selectedPackage?.id === p.id 
                             ? (siteSettings.selectedPackageColor || '#eff6ff')
@@ -1064,10 +1119,10 @@ export default function App() {
             </div>
 
             {/* Description / Rules */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">4</div>
-                <h3 className="text-xl font-bold text-blue-700">Description</h3>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-blue-100">4</div>
+                <h3 className="text-2xl font-black text-blue-700">Description</h3>
               </div>
               
               <div className="space-y-4 text-sm font-bold text-slate-700">
@@ -1076,34 +1131,9 @@ export default function App() {
                     {selectedGame.description}
                   </div>
                 ) : (
-                  <>
-                    <p className="flex gap-2">
-                      <span className="text-slate-900">▶</span>
-                      অর্ডার করার আগে অবশ্যই ভালোভাবে রুলস গুলো পড়ে নেবেন
-                    </p>
-                    <div className="space-y-2 pl-4">
-                      <p className="flex gap-2">
-                        <span className="text-slate-900">◉</span>
-                        শুধুমাত্র বাংলাদেশ সার্ভার এর আইডিতে টপ আপ করতে পারবেন।
-                      </p>
-                      <p className="flex gap-2">
-                        <span className="text-slate-900">◉</span>
-                        Player ID Code ভুল দিয়ে Diamond না পেলে {siteSettings.siteName} কর্তৃপক্ষ দায়ী নয়।
-                      </p>
-                      <p className="flex gap-2">
-                        <span className="text-slate-900">◉</span>
-                        আইডি কোড দিয়ে অর্ডার করলে এবং কোনো কারণে ডায়মন্ড না গেলে চেক করার জন্য গেইম এর লগিন ইনফো আইডি পাসওয়ার্ড দিতে হবে।
-                      </p>
-                      <p className="flex gap-2">
-                        <span className="text-slate-900">◉</span>
-                        ডেলিভারি টাইম সাধারণত ১-২ মিনিট এর মধ্যেই হয়ে থাকে, ইভেন্ট থাকলে ২-৩ ঘণ্টা বা তার ও বেশি সময় লাগতে পারে।
-                      </p>
-                      <p className="flex gap-2">
-                        <span className="text-slate-900">◉</span>
-                        সার্ভারে সমস্যা থাকলে অথবা স্টক না থাকলে সর্বোচ্চ ২৪ ঘণ্টা পর্যন্ত লাগতে পারে। ২৪ ঘন্টার মধ্যে রিফান্ড চাইলে ওয়ালেট এ রিফান্ড করে দেওয়া হবে।
-                      </p>
-                    </div>
-                  </>
+                  <div className="whitespace-pre-wrap leading-relaxed">
+                    {siteSettings.loyaltyRules}
+                  </div>
                 )}
               </div>
             </div>
@@ -1303,16 +1333,16 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {[
                 { label: 'User ID', value: userProfile.supportPin, color: 'text-red-500' },
                 { label: 'Weekly Spent', value: `৳${userProfile.totalSpent}`, color: 'text-red-500' },
                 { label: 'Total Spent', value: userProfile.totalSpent, color: 'text-red-500' },
                 { label: 'Total Order', value: userProfile.totalOrders, color: 'text-red-500' }
               ].map((stat) => (
-                <div key={stat.label} className="bg-white p-6 rounded-2xl border border-red-100 text-center space-y-1 shadow-sm">
-                  <div className={`text-lg font-black ${stat.color}`}>{stat.value}</div>
-                  <div className="text-[10px] font-black text-indigo-950 uppercase">{stat.label}</div>
+                <div key={stat.label} className="bg-white p-4 md:p-6 rounded-2xl border border-red-100 text-center space-y-1 shadow-sm overflow-hidden">
+                  <div className={`text-sm md:text-lg font-black ${stat.color} truncate`}>{stat.value}</div>
+                  <div className="text-[8px] md:text-[10px] font-black text-indigo-950 uppercase truncate">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -1375,14 +1405,21 @@ export default function App() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     setIsProfileUpdating(true);
-                    // Simulate update
-                    setTimeout(() => {
-                      setUserProfile({...userProfile, name: editName, phone: editPhone});
+                    try {
+                      await update(ref(db, `users/${user.uid}`), {
+                        name: editName,
+                        phone: editPhone
+                      });
                       alert('Profile updated successfully!');
+                      setView('profile');
+                    } catch (error) {
+                      console.error("Error updating profile:", error);
+                      alert('Failed to update profile. Please try again.');
+                    } finally {
                       setIsProfileUpdating(false);
-                    }, 1000);
+                    }
                   }}
                   disabled={isProfileUpdating}
                   className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50"
@@ -2030,30 +2067,30 @@ export default function App() {
                     o.userId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                     o.phoneNumber?.toLowerCase().includes(orderSearch.toLowerCase())
                   ).map((o, i) => (
-                    <div key={`admin-order-mobile-${o.id}-${i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                    <div key={`admin-order-mobile-${o.id}-${i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4 overflow-hidden">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
-                          <div>
-                            <div className="font-black text-indigo-950 text-xs">{o.userEmail}</div>
-                            <div className="text-[10px] text-slate-500 font-bold">Phone: {o.phoneNumber || 'N/A'}</div>
-                            <div className="text-[10px] text-slate-400 font-bold">{new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</div>
-                            <div className="text-[10px] text-slate-400 font-bold">Order #{o.id}</div>
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-10 h-10 bg-indigo-100 rounded-xl flex-shrink-0 flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-black text-indigo-950 text-xs truncate">{o.userEmail}</div>
+                            <div className="text-[10px] text-slate-500 font-bold truncate">Phone: {o.phoneNumber || 'N/A'}</div>
+                            <div className="text-[10px] text-slate-400 font-bold truncate">{new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</div>
+                            <div className="text-[10px] text-slate-400 font-bold truncate">Order #{o.id}</div>
                           </div>
                         </div>
-                        <button onClick={() => remove(ref(db, `orders/${o.id}`))} className="text-red-400 p-2"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => remove(ref(db, `orders/${o.id}`))} className="text-red-400 p-2 flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white p-3 rounded-xl border border-slate-100">
-                          <div className="text-[10px] text-slate-400 font-bold uppercase">Game Info</div>
-                          <div className="font-black text-indigo-950">{o.gameName}</div>
-                          <div className="text-indigo-600 font-bold">{o.packageName}</div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100 overflow-hidden">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase truncate">Game Info</div>
+                          <div className="font-black text-indigo-950 truncate">{o.gameName}</div>
+                          <div className="text-indigo-600 font-bold truncate">{o.packageName}</div>
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-100">
-                          <div className="text-[10px] text-slate-400 font-bold uppercase">Payment</div>
-                          <div className="font-black text-indigo-950">{o.paymentMethod}</div>
-                          <div className="font-mono text-[10px] text-slate-500 truncate">{o.transactionId}</div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100 overflow-hidden">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase truncate">Payment</div>
+                          <div className="font-black text-indigo-950 truncate">{o.paymentMethod}</div>
+                          <div className="font-mono text-[10px] text-slate-500 truncate" title={o.transactionId}>{o.transactionId}</div>
                         </div>
                       </div>
 
@@ -2242,6 +2279,14 @@ export default function App() {
                         <input type="text" value={siteSettings.priceColor || '#ef4444'} onChange={e => setSiteSettings({...siteSettings, priceColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Premium Threshold (৳)</label>
+                      <input type="number" value={siteSettings.premiumThreshold || 10000} onChange={e => setSiteSettings({...siteSettings, premiumThreshold: parseInt(e.target.value)})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Loyalty Discount Rules (Bullet Points)</label>
+                      <textarea value={siteSettings.loyaltyRules} onChange={e => setSiteSettings({...siteSettings, loyaltyRules: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" rows={8} />
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => set(ref(db, 'settings'), siteSettings)} className="bg-indigo-600 text-white px-12 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-[1.02] transition-all">Update Platform Settings</button>
@@ -2275,14 +2320,22 @@ export default function App() {
                           <td className="p-8">
                             <div className="font-mono text-xs font-black text-indigo-950 bg-slate-100 px-2 py-1 rounded w-fit select-all">{u.supportPin || 'N/A'}</div>
                           </td>
-                          <td className="p-8">
-                            <div className="text-lg font-black text-red-500">৳{u.balance || 0}</div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase">Available</div>
+                           <td className="p-8">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <Wallet className="w-3 h-3 text-green-500" />
+                                <span className="text-sm font-black text-indigo-950">৳{u.balance || 0}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <History className="w-3 h-3 text-indigo-400" />
+                                <span className="text-[10px] font-bold text-slate-400">Spent: ৳{u.totalSpent || 0}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="p-8">
                             <div className="space-y-1">
                               <div className="text-xs font-bold text-indigo-950">Orders: {u.totalOrders || 0}</div>
-                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Spent: ৳{u.totalSpent || 0}</div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Active</div>
                             </div>
                           </td>
                           <td className="p-8 text-right">
@@ -2293,6 +2346,12 @@ export default function App() {
                                   update(ref(db, `users/${u.id}`), { balance: Number(newBalance) });
                                 }
                               }} className="text-indigo-600 p-3 hover:bg-indigo-50 rounded-xl transition-all font-black text-xs uppercase">Edit Balance</button>
+                              <button onClick={() => {
+                                const newSpent = prompt('Enter new total spent:', u.totalSpent || 0);
+                                if (newSpent !== null) {
+                                  update(ref(db, `users/${u.id}`), { totalSpent: Number(newSpent) });
+                                }
+                              }} className="text-orange-600 p-3 hover:bg-orange-50 rounded-xl transition-all font-black text-xs uppercase">Edit Spent</button>
                               <button onClick={() => {
                                 setAdminTab('orders');
                                 setOrderSearch(u.id);
@@ -2799,6 +2858,20 @@ export default function App() {
               >
                 {isGenerating ? <div className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full" /> : <Sparkles className="w-4 h-4" />}
               </button>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border rounded-xl">
+              <input 
+                type="checkbox" 
+                id="isPremium"
+                checked={editGame.isPremium || false} 
+                onChange={e => setEditGame({...editGame, isPremium: e.target.checked})} 
+                className="w-5 h-5 accent-indigo-600"
+              />
+              <label htmlFor="isPremium" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                Premium Game (Requires Loyalty)
+              </label>
             </div>
 
             <button onClick={adminSaveGame} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">Save</button>
