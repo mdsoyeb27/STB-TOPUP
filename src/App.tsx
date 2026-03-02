@@ -109,6 +109,8 @@ interface SiteSettings {
   priceColor?: string;
   premiumThreshold?: number;
   loyaltyRules?: string;
+  categorySort?: string[];
+  homeBanners?: string[];
 }
 interface UserProfile {
   name: string;
@@ -147,17 +149,21 @@ export default function App() {
     stockOutColor: '#f8fafc', // bg-slate-50
     priceColor: '#ef4444', // text-red-500
     premiumThreshold: 10000,
+    categorySort: [],
+    homeBanners: [],
     loyaltyRules: `
-• Premium User Loyalty Discount
+🚩 Premium User Loyalty Discount
 যেসব গ্রাহক আমাদের কাছ থেকে মোট ১০,০০০ বা তার বেশি মূল্যের পণ্য ক্রয় করেছেন, তারা Premium User Loyalty Discount অফারটি পাওয়ার যোগ্য হবেন। নির্ধারিত পরিমাণ টাকার টপ-আপ সম্পন্ন হলে, আপনি পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট উপভোগ করতে পারবেন।
-• অফারের বিস্তারিত:
-• শুধুমাত্র বিশ্বস্ত গ্রাহকদের জন্য প্রিমিয়াম পুরস্কার
-• আমাদের থেকে মোট ১০,০০০+ টাকার কেনাকাটা থাকতে হবে
-• পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট প্রযোজ্য হবে
-• একজন গ্রাহক ২৪ ঘণ্টার মধ্যে যেকোনো সর্বোচ্চ ২টি প্যাকেজ অর্ডার করতে পারবেন
-• প্রচলিত শর্ত অনুযায়ী অফার কার্যকর হবে
-• শুধুমাত্র ভেরিফাইড গ্রাহকদের জন্য প্রযোজ্য
-• শর্তাবলী পরিবর্তনের অধিকার
+
+💥 অফারের বিস্তারিত:
+✔ শুধুমাত্র বিশ্বস্ত গ্রাহকদের জন্য প্রিমিয়াম পুরস্কার
+✔ আমাদের থেকে মোট ১০,০০০+ টাকার কেনাকাটা থাকতে হবে
+✔ পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট প্রযোজ্য হবে
+✔ একজন গ্রাহক ২৪ ঘণ্টার মধ্যে যেকোনো সর্বোচ্চ ২টি প্যাকেজ অর্ডার করতে পারবেন
+✔ প্রচলিত শর্ত অনুযায়ী অফার কার্যকর হবে
+✔ শুধুমাত্র ভেরিফাইড গ্রাহকদের জন্য প্রযোজ্য
+📜 শর্তাবলী পরিবর্তনের অধিকার
+
 আমরা প্রয়োজনে এই অফারের শর্তাবলী, সুবিধা বা মেয়াদ যে কোনো সময় পূর্ব নোটিশ ছাড়াই পরিবর্তন, সংশোধন বা বাতিল করার অধিকার সংরক্ষণ করি। এই অফার সংক্রান্ত আমাদের সিদ্ধান্তই চূড়ান্ত বলে গণ্য হবে।
     `.trim()
   });
@@ -736,41 +742,65 @@ export default function App() {
               </div>
             </section>
 
-            {/* Categories */}
-            {Array.from(new Set(games.map(g => g.category))).map((cat, i) => (
-              <div key={cat || `uncategorized-${i}`} className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
-                  <h2 className="text-lg font-black text-center text-slate-800 uppercase tracking-wider">{cat}</h2>
-                  <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
-                </div>
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
-                  {games.length === 0 ? (
-                    Array(6).fill(0).map((_, i) => <Skeleton key={i} className="aspect-square rounded-2xl" />)
-                  ) : (
-                    games.filter(g => g.category === cat).map((g, idx) => (
-                      <motion.div 
-                        key={`game-item-${g.id}-${idx}`} 
-                        whileHover={{ y: -5 }} 
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => { setSelectedGame(g); setView('game'); }} 
-                        className="bg-white p-2 rounded-2xl shadow-sm cursor-pointer border border-slate-100 hover:shadow-md transition-all"
-                      >
-                        <div className="relative aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50">
-                          <img src={g.image} className="w-full h-full object-cover" />
-                          {idx < 3 && (
-                              <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg">
-                                  HOT
-                              </div>
-                          )}
-                        </div>
-                        <h3 className="text-[10px] md:text-xs font-bold text-center text-slate-800 line-clamp-1">{g.name}</h3>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
+            {/* Home Banners (Attractive Offers) */}
+            {siteSettings.homeBanners && siteSettings.homeBanners.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {siteSettings.homeBanners.map((banner, i) => (
+                  <motion.div 
+                    key={`home-banner-${i}`}
+                    whileHover={{ scale: 1.02 }}
+                    className="relative h-32 md:h-40 rounded-2xl overflow-hidden shadow-md cursor-pointer border border-slate-100"
+                  >
+                    <img src={banner} className="w-full h-full object-cover" alt={`Offer ${i+1}`} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"></div>
+                  </motion.div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Categories */}
+            {(siteSettings.categorySort && siteSettings.categorySort.length > 0 
+              ? siteSettings.categorySort 
+              : Array.from(new Set(games.map(g => g.category)))
+            ).map((cat, i) => {
+              const categoryGames = games.filter(g => g.category === cat);
+              if (categoryGames.length === 0) return null;
+              
+              return (
+                <div key={cat || `uncategorized-${i}`} className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
+                    <h2 className="text-lg font-black text-center text-slate-800 uppercase tracking-wider">{cat}</h2>
+                    <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
+                  </div>
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
+                    {games.length === 0 ? (
+                      Array(6).fill(0).map((_, i) => <Skeleton key={i} className="aspect-square rounded-2xl" />)
+                    ) : (
+                      categoryGames.map((g, idx) => (
+                        <motion.div 
+                          key={`game-item-${g.id}-${idx}`} 
+                          whileHover={{ y: -5 }} 
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => { setSelectedGame(g); setView('game'); }} 
+                          className="bg-white p-2 rounded-2xl shadow-sm cursor-pointer border border-slate-100 hover:shadow-md transition-all"
+                        >
+                          <div className="relative aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50">
+                            <img src={g.image} className="w-full h-full object-cover" />
+                            {idx < 3 && (
+                                <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg">
+                                    HOT
+                                </div>
+                            )}
+                          </div>
+                          <h3 className="text-[10px] md:text-xs font-bold text-center text-slate-800 line-clamp-1">{g.name}</h3>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
             {/* Banners - Moved to Home Screen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -884,33 +914,42 @@ export default function App() {
 
             {/* Premium User Card */}
             {selectedGame.isPremium && (
-              <div className="bg-white p-6 rounded-2xl border border-orange-100 shadow-sm space-y-4 relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest">বিশেষ অফার</div>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-black text-indigo-950">এই প্রোডাক্টটি শুধু বিশেষ ইউজারদের জন্য আনলক হবে</h3>
-                    <p className="text-xs font-bold text-slate-400">আপনার অ্যাকাউন্ট থেকে মোট {siteSettings.premiumThreshold || 10000}৳ বা তার বেশি টপ-আপ করলেই এই অফারটি আপনার জন্য স্থায়ীভাবে আনলক হয়ে যাবে।</p>
+              <div className="space-y-4">
+                <h2 className="text-xl font-black text-indigo-950 ml-1">Premium User</h2>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-sm space-y-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-orange-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">বিশেষ অফার</div>
+                  
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div className="space-y-2 flex-1">
+                      <h3 className="text-lg font-black text-indigo-950 leading-tight">এই প্রোডাক্টটি শুধু বিশেষ ইউজারদের জন্য আনলক হবে</h3>
+                      <p className="text-[11px] font-bold text-slate-600 leading-relaxed">আপনার অ্যাকাউন্ট থেকে মোট <span className="text-red-600">৳{siteSettings.premiumThreshold || 10000}</span> বা তার বেশি টপ-আপ করলেই এই অফারটি আপনার জন্য স্থায়ীভাবে আনলক হয়ে যাবে।</p>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">আপনার মোট খরচ: <span className="text-green-600 font-black">৳{userProfile.totalSpent || 0}</span></div>
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">আরও <span className="text-red-600 font-black">৳{Math.max(0, (siteSettings.premiumThreshold || 10000) - (userProfile.totalSpent || 0))}</span> টপ-আপ করলেই অফারটি আনলক হবে</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">আপনার মোট খরচ: <span className="text-green-600">৳{userProfile.totalSpent || 0}</span></div>
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">আরও <span className="text-red-500">৳{Math.max(0, (siteSettings.premiumThreshold || 10000) - (userProfile.totalSpent || 0))}</span> টপ-আপ করলেই অফারটি আনলক হবে</div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                      <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-orange-500" /> প্রোগ্রেস</span>
+                      <span className="bg-white/50 px-2 py-0.5 rounded-full">{Math.min(100, Math.round(((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100))}%</span>
+                    </div>
+                    <div className="h-4 bg-white/50 rounded-full overflow-hidden border border-orange-200 p-0.5 shadow-inner">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, ((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100)}%` }}
+                        className="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 rounded-full shadow-sm relative"
+                      >
+                         <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]"></div>
+                      </motion.div>
+                    </div>
                   </div>
+                  <p className="text-[10px] font-bold text-slate-500 italic flex items-center gap-1.5">
+                    <AlertCircle className="w-3 h-3 text-orange-500" />
+                    একটু একটু করে টপ-আপ করলেই এই অফারটির জন্য <span className="text-indigo-600 font-black">LOYALTY ACCESS</span> আনলক হয়ে যাবে।
+                  </p>
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                    <span>প্রোগ্রেস</span>
-                    <span>{Math.min(100, Math.round(((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100))}%</span>
-                  </div>
-                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, ((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100)}%` }}
-                      className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full shadow-sm"
-                    />
-                  </div>
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 italic">একটু একটু করে টপ-আপ করলেই এই অফারটির জন্য <span className="text-indigo-600 font-black">LOYALTY ACCESS</span> আনলক হয়ে যাবে।</p>
               </div>
             )}
 
@@ -974,7 +1013,7 @@ export default function App() {
             {/* Step 2: Account Info */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">2</div>
+                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">1</div>
                 <h3 className="text-xl font-bold text-blue-700">Account Info</h3>
               </div>
               
@@ -2286,6 +2325,30 @@ export default function App() {
                     <div className="space-y-2 md:col-span-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Loyalty Discount Rules (Bullet Points)</label>
                       <textarea value={siteSettings.loyaltyRules} onChange={e => setSiteSettings({...siteSettings, loyaltyRules: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" rows={8} />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Category Sort Order (One per line)</label>
+                      <textarea 
+                        value={siteSettings.categorySort?.join('\n') || ''} 
+                        onChange={e => setSiteSettings({...siteSettings, categorySort: e.target.value.split('\n').filter(s => s.trim())})} 
+                        className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" 
+                        rows={4} 
+                        placeholder="e.g.&#10;In-Game Topup&#10;ID Code Topup&#10;Gift Card"
+                      />
+                      <p className="text-[10px] text-slate-400 font-bold italic mt-1">Categories will appear on the homepage in this exact order.</p>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Home Banners (Attractive Offers - One URL per line)</label>
+                      <textarea 
+                        value={siteSettings.homeBanners?.join('\n') || ''} 
+                        onChange={e => setSiteSettings({...siteSettings, homeBanners: e.target.value.split('\n').filter(s => s.trim())})} 
+                        className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" 
+                        rows={4} 
+                        placeholder="https://example.com/banner1.jpg&#10;https://example.com/banner2.jpg"
+                      />
+                      <p className="text-[10px] text-slate-400 font-bold italic mt-1">These banners will appear right below the main slider.</p>
                     </div>
                   </div>
                 </div>
