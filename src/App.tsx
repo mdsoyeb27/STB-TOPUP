@@ -14,6 +14,7 @@ import {
   Zap,
   Clock,
   ChevronRight,
+  ChevronLeft,
   Gamepad2,
   Smartphone,
   Globe,
@@ -215,6 +216,16 @@ export default function App() {
     
     setRealTimeLatestOrders(combined);
   }, [orders, packages]);
+
+  // Handle Back Button to prevent app exit
+  useEffect(() => {
+    if (view !== 'home') {
+      window.history.pushState(null, '', window.location.href);
+      const handlePop = () => setView('home');
+      window.addEventListener('popstate', handlePop);
+      return () => window.removeEventListener('popstate', handlePop);
+    }
+  }, [view]);
 
   const [aiResponse, setAiResponse] = useState<string>('');
 
@@ -613,11 +624,17 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors group">
-              <div className="w-6 h-0.5 bg-indigo-950 mb-1.5 rounded-full group-hover:w-4 transition-all"></div>
-              <div className="w-4 h-0.5 bg-red-500 mb-1.5 rounded-full group-hover:w-6 transition-all"></div>
-              <div className="w-6 h-0.5 bg-indigo-950 rounded-full group-hover:w-4 transition-all"></div>
-            </button>
+            {view === 'home' ? (
+              <button onClick={() => setIsSidebarOpen(true)} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors group">
+                <div className="w-6 h-0.5 bg-indigo-950 mb-1.5 rounded-full group-hover:w-4 transition-all"></div>
+                <div className="w-4 h-0.5 bg-red-500 mb-1.5 rounded-full group-hover:w-6 transition-all"></div>
+                <div className="w-6 h-0.5 bg-indigo-950 rounded-full group-hover:w-4 transition-all"></div>
+              </button>
+            ) : (
+              <button onClick={() => setView('home')} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors group">
+                <ChevronLeft className="w-6 h-6 text-indigo-950 group-hover:-translate-x-1 transition-transform" />
+              </button>
+            )}
             <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setView('home'); setSelectedGame(null); }}>
               <div className="w-10 h-10 bg-indigo-950 rounded-xl flex items-center justify-center text-white group-hover:rotate-12 transition-transform shadow-lg shadow-indigo-900/20">
                 <Zap className="w-6 h-6 fill-current text-red-500" />

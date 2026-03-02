@@ -59,7 +59,7 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const model = 'gemini-2.5-flash-lite-latest'; // Using a faster model for chat
+      const model = 'gemini-3-flash-preview'; // Using the latest stable flash preview model
       
       let systemInstruction = '';
       
