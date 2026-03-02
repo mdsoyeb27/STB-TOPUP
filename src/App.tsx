@@ -70,7 +70,17 @@ const latestOrders = [
 
 // Types
 interface Game { id: string; name: string; image: string; category: string; description?: string; }
-interface Package { id: string; gameId: string; name: string; amount: string; price: number; bonus?: string; inStock?: boolean; }
+interface Package { 
+  id: string; 
+  gameId: string; 
+  name: string; 
+  amount: string; 
+  price: number; 
+  bonus?: string; 
+  inStock?: boolean; 
+  stock?: number;
+  category?: string;
+}
 interface Order { 
   id: string; userId: string; userEmail: string; uid: string; accountType: string; 
   gameName: string; packageName: string; paymentMethod: string; transactionId: string; 
@@ -423,30 +433,51 @@ export default function App() {
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return setIsAuthModalOpen(true);
+
+    // Wallet Balance Check
+    if (paymentType === 'wallet') {
+      if ((userProfile.balance || 0) < (selectedPackage?.price || 0)) {
+        alert("Insufficient balance! Please add money to your wallet.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const orderId = `ORD-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`;
+      
+      // Determine Payment Details
+      const finalPaymentMethod = paymentType === 'wallet' ? 'Wallet' : paymentMethod;
+      const finalTrxId = paymentType === 'wallet' ? `WAL-${Date.now()}` : trxId;
+      const finalPhone = paymentType === 'wallet' ? (userProfile.phone || user.phoneNumber || 'N/A') : phoneNumber;
+
       await set(ref(db, `orders/${orderId}`), {
         id: orderId,
         userId: user.uid, 
         userEmail: user.email, 
         uid, 
-        gameName: selectedGame?.name || 'Wallet', // Handle wallet case
-        gameId: selectedPackage?.gameId, // Save gameId to identify wallet deposits
+        gameName: selectedGame?.name || 'Wallet', 
+        gameId: selectedPackage?.gameId,
         packageName: `${selectedPackage?.amount} ${selectedPackage?.name}`,
         price: selectedPackage?.price,
-        paymentMethod, 
-        transactionId: trxId, 
-        phoneNumber,
+        paymentMethod: finalPaymentMethod, 
+        transactionId: finalTrxId, 
+        phoneNumber: finalPhone,
         status: 'Pending', 
         timestamp: Date.now()
       });
       
-      // Update user stats
-      await update(ref(db, `users/${user.uid}`), {
+      // Update user stats & Deduct Balance if Wallet
+      const updates: any = {
         totalOrders: (userProfile.totalOrders || 0) + 1,
         totalSpent: (userProfile.totalSpent || 0) + (selectedPackage?.price || 0)
-      });
+      };
+
+      if (paymentType === 'wallet') {
+        updates.balance = (userProfile.balance || 0) - (selectedPackage?.price || 0);
+      }
+
+      await update(ref(db, `users/${user.uid}`), updates);
 
       setOrderSuccess(true);
       setTimeout(() => { 
@@ -976,20 +1007,22 @@ export default function App() {
               </div>
 
               {/* Info Boxes */}
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-600 border border-slate-200 p-3 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-blue-500" />
-                  আপনার অ্যাকাউন্ট ব্যালেন্স <span className="text-blue-600">৳ {userProfile.balance}</span>
+              {paymentType === 'wallet' && (
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-600 border border-slate-200 p-3 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-blue-500" />
+                    আপনার অ্যাকাউন্ট ব্যালেন্স <span className="text-blue-600">৳ {userProfile.balance}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-600 border border-slate-200 p-3 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-blue-500" />
+                    প্রোডাক্ট কিনতে আপনার প্রয়োজন <span className="text-blue-600">৳ {selectedPackage?.price || 0}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-600 border border-slate-200 p-3 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-blue-500" />
-                  প্রোডাক্ট কিনতে আপনার প্রয়োজন <span className="text-blue-600">৳ {selectedPackage?.price || 0}</span>
-                </div>
-              </div>
+              )}
 
               {/* Buy Now Button (Inside Payment Section) */}
               <div className="flex justify-end items-center gap-3">
-                  {user && selectedPackage && userProfile.balance < selectedPackage.price && (
+                  {user && selectedPackage && paymentType === 'wallet' && userProfile.balance < selectedPackage.price && (
                     <button 
                       onClick={() => setView('add-money')}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2 animate-bounce"
@@ -997,33 +1030,36 @@ export default function App() {
                       <Plus className="w-4 h-4" /> ADD MONEY
                     </button>
                   )}
-                  <button 
-                    onClick={() => { 
-                        if (!user) {
-                          setIsAuthModalOpen(true); 
-                        } else if (!selectedPackage) {
-                          alert("Please select a package first");
-                        } else if (!uid) {
-                          alert("Please enter your Player ID");
-                        } else {
-                          if (paymentType === 'instant') {
-                              setPaymentMethod(''); // Reset method
-                              setView('gateway');
+                  
+                  {(!user || !selectedPackage || paymentType === 'instant' || (paymentType === 'wallet' && userProfile.balance >= selectedPackage.price)) && (
+                    <button 
+                      onClick={() => { 
+                          if (!user) {
+                            setIsAuthModalOpen(true); 
+                          } else if (!selectedPackage) {
+                            alert("Please select a package first");
+                          } else if (!uid) {
+                            alert("Please enter your Player ID");
                           } else {
-                              if (userProfile.balance < (selectedPackage.price || 0)) {
-                                if (confirm("Insufficient balance! Do you want to add money?")) {
-                                  setView('add-money');
+                            if (paymentType === 'instant') {
+                                setPaymentMethod(''); // Reset method
+                                setView('gateway');
+                            } else {
+                                if (userProfile.balance < (selectedPackage.price || 0)) {
+                                  if (confirm("Insufficient balance! Do you want to add money?")) {
+                                    setView('add-money');
+                                  }
+                                } else {
+                                  setIsOrderModalOpen(true); 
                                 }
-                              } else {
-                                setIsOrderModalOpen(true); 
-                              }
+                            }
                           }
-                        }
-                    }} 
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3.5 rounded-xl font-black text-sm shadow-xl shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
-                    >
-                    {user ? 'BUY NOW' : 'LOGIN TO BUY'}
-                  </button>
+                      }} 
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3.5 rounded-xl font-black text-sm shadow-xl shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+                      >
+                      {user ? (paymentType === 'instant' ? 'PAY NOW' : 'BUY NOW') : 'LOGIN TO BUY'}
+                    </button>
+                  )}
               </div>
             </div>
 
@@ -2588,18 +2624,50 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-orange-50 p-6 rounded-[2rem] border-2 border-dashed border-orange-200 text-center space-y-2">
-                  <Wallet className="w-10 h-10 text-orange-500 mx-auto" />
-                  <div className="text-sm font-black text-indigo-950">Wallet Payment</div>
-                  <p className="text-[10px] font-bold text-slate-500">৳{selectedPackage.price} will be deducted from your balance.</p>
+                <div className="bg-orange-50 p-6 rounded-[2rem] border-2 border-dashed border-orange-200 text-center space-y-4">
+                  <Wallet className="w-12 h-12 text-orange-500 mx-auto" />
+                  <div>
+                    <div className="text-lg font-black text-indigo-950">Wallet Payment</div>
+                    <p className="text-xs font-bold text-slate-400">Pay securely from your balance</p>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-xl border border-orange-100 grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-[10px] font-black text-slate-400 uppercase">Your Balance</div>
+                      <div className={`text-lg font-black ${(userProfile.balance || 0) < (selectedPackage?.price || 0) ? 'text-red-500' : 'text-green-500'}`}>
+                        ৳{userProfile.balance || 0}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black text-slate-400 uppercase">Product Cost</div>
+                      <div className="text-lg font-black text-indigo-950">৳{selectedPackage?.price}</div>
+                    </div>
+                  </div>
+
+                  {(userProfile.balance || 0) < (selectedPackage?.price || 0) ? (
+                    <div className="bg-red-100 text-red-600 p-3 rounded-xl text-xs font-bold">
+                      Insufficient Balance. Please add money.
+                    </div>
+                  ) : (
+                    <div className="bg-green-100 text-green-600 p-3 rounded-xl text-xs font-bold">
+                      Sufficient Balance. You can buy now.
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="flex gap-4">
                 <button onClick={() => { setIsOrderModalOpen(false); setView('payment-cancelled'); }} className="flex-1 py-5 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
-                <button onClick={handleOrder} disabled={isSubmitting} className="flex-[2] bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
-                  {isSubmitting ? 'Processing...' : 'Confirm Order'}
-                </button>
+                
+                {paymentType === 'wallet' && (userProfile.balance || 0) < (selectedPackage?.price || 0) ? (
+                   <button onClick={() => { setIsOrderModalOpen(false); setView('add-money'); }} className="flex-[2] bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">
+                     Add Money
+                   </button>
+                ) : (
+                   <button onClick={handleOrder} disabled={isSubmitting} className="flex-[2] bg-red-500 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+                     {isSubmitting ? 'Processing...' : paymentType === 'wallet' ? 'Buy Now' : 'Confirm Order'}
+                   </button>
+                )}
               </div>
             </div>
           </div>
@@ -2753,6 +2821,7 @@ export default function App() {
             <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
             <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
             <input placeholder="Price" type="number" value={editPkg.price === undefined || isNaN(editPkg.price as number) ? '' : editPkg.price} onChange={e => setEditPkg({...editPkg, price: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
+            <input placeholder="Stock Quantity (Optional)" type="number" value={editPkg.stock === undefined ? '' : editPkg.stock} onChange={e => setEditPkg({...editPkg, stock: e.target.value === '' ? undefined : Number(e.target.value)})} className="w-full border p-3 rounded-xl" />
             <div className="flex items-center gap-3 p-3 border rounded-xl">
               <input 
                 type="checkbox" 
@@ -2768,7 +2837,25 @@ export default function App() {
         )}
       </Modal>
       
-      <AIChatbot />
+      <AIChatbot 
+        isAdmin={isAdminLoggedIn} 
+        orders={orders} 
+        packages={packages} 
+        user={user} 
+        onAddPackage={(pkgData) => {
+          const newPkg = {
+            id: `pkg-${Date.now()}`,
+            gameId: pkgData.gameId || games[0]?.id || 'free-fire',
+            name: pkgData.name,
+            amount: pkgData.amount || pkgData.name,
+            price: pkgData.price,
+            inStock: true,
+            stock: pkgData.stock || 999
+          };
+          setPackages(prev => [...prev, newPkg]);
+          set(ref(db, 'packages'), [...packages, newPkg]);
+        }}
+      />
       <BottomNav view={view} setView={setView} setIsSidebarOpen={setIsSidebarOpen} />
       <div className="md:hidden h-20"></div>
     </div>
