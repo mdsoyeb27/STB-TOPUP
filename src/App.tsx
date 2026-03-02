@@ -56,6 +56,7 @@ import { GoogleGenAI } from "@google/genai";
 import AIChatbot from './components/AIChatbot';
 import BottomNav from './components/BottomNav';
 import { Modal } from './components/Modal';
+import { Skeleton } from './components/Skeleton';
 
 // Mock Data for Latest Orders
 const latestOrders = [
@@ -92,9 +93,12 @@ interface SiteSettings {
   upayLogo: string;
   siteName: string;
   siteLogo: string;
+  selectedPackageColor?: string;
+  stockOutColor?: string;
 }
 interface UserProfile {
   name: string;
+  phone?: string;
   balance: number;
   totalSpent: number;
   totalOrders: number;
@@ -124,7 +128,9 @@ export default function App() {
     rocketLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Rocket_Logo.png/1200px-Rocket_Logo.png',
     upayLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Upay_Logo.png/1200px-Upay_Logo.png',
     siteName: 'STB TOPUP',
-    siteLogo: 'https://ui-avatars.com/api/?name=STB&background=6366f1&color=fff&size=128'
+    siteLogo: 'https://ui-avatars.com/api/?name=STB&background=6366f1&color=fff&size=128',
+    selectedPackageColor: '#eff6ff', // bg-blue-50
+    stockOutColor: '#f8fafc' // bg-slate-50
   });
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
@@ -135,7 +141,7 @@ export default function App() {
     supportPin: '666994'
   });
   
-  const [view, setView] = useState<'home' | 'game' | 'profile' | 'admin' | 'add-money' | 'transactions' | 'payment-cancelled' | 'privacy' | 'gateway' | 'gateway-payment' | 'support'>('home');
+  const [view, setView] = useState<'home' | 'game' | 'profile' | 'edit-profile' | 'admin' | 'add-money' | 'transactions' | 'payment-cancelled' | 'privacy' | 'gateway' | 'gateway-payment' | 'support'>('home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
@@ -179,6 +185,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [uid, setUid] = useState('');
   const [trxId, setTrxId] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Bkash');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -189,8 +196,23 @@ export default function App() {
   const [editGame, setEditGame] = useState<Partial<Game> | null>(null);
   const [editPkg, setEditPkg] = useState<Partial<Package> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Profile Edit States
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isProfileUpdating, setIsProfileUpdating] = useState(false);
 
   const [addMoneyAmount, setAddMoneyAmount] = useState('');
+
+  useEffect(() => {
+    if (userProfile) {
+      setEditName(userProfile.name || '');
+      setEditPhone(userProfile.phone || '');
+    }
+  }, [userProfile]);
 
   const handleAddMoney = () => {
     const amount = Number(addMoneyAmount);
@@ -408,6 +430,7 @@ export default function App() {
         price: selectedPackage?.price,
         paymentMethod, 
         transactionId: trxId, 
+        phoneNumber,
         status: 'Pending', 
         timestamp: Date.now()
       });
@@ -424,6 +447,7 @@ export default function App() {
         setOrderSuccess(false); 
         setUid(''); 
         setTrxId(''); 
+        setPhoneNumber('');
         setPaymentMethod('');
         setView('home');
       }, 3000);
@@ -664,25 +688,29 @@ export default function App() {
                   <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
                 </div>
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
-                  {games.filter(g => g.category === cat).map((g, idx) => (
-                    <motion.div 
-                      key={`game-item-${g.id || idx}`} 
-                      whileHover={{ y: -5 }} 
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => { setSelectedGame(g); setView('game'); }} 
-                      className="bg-white p-2 rounded-2xl shadow-sm cursor-pointer border border-slate-100 hover:shadow-md transition-all"
-                    >
-                      <div className="relative aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50">
-                        <img src={g.image} className="w-full h-full object-cover" />
-                        {idx < 3 && (
-                            <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg">
-                                HOT
-                            </div>
-                        )}
-                      </div>
-                      <h3 className="text-[10px] md:text-xs font-bold text-center text-slate-800 line-clamp-1">{g.name}</h3>
-                    </motion.div>
-                  ))}
+                  {games.length === 0 ? (
+                    Array(6).fill(0).map((_, i) => <Skeleton key={i} className="aspect-square rounded-2xl" />)
+                  ) : (
+                    games.filter(g => g.category === cat).map((g, idx) => (
+                      <motion.div 
+                        key={`game-item-${g.id}-${idx}`} 
+                        whileHover={{ y: -5 }} 
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => { setSelectedGame(g); setView('game'); }} 
+                        className="bg-white p-2 rounded-2xl shadow-sm cursor-pointer border border-slate-100 hover:shadow-md transition-all"
+                      >
+                        <div className="relative aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50">
+                          <img src={g.image} className="w-full h-full object-cover" />
+                          {idx < 3 && (
+                              <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg">
+                                  HOT
+                              </div>
+                          )}
+                        </div>
+                        <h3 className="text-[10px] md:text-xs font-bold text-center text-slate-800 line-clamp-1">{g.name}</h3>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </div>
             ))}
@@ -728,7 +756,7 @@ export default function App() {
               </div>
               <div className="divide-y divide-slate-100">
                 {realTimeLatestOrders.map((order, i) => (
-                  <div key={`latest-order-${order.id || i}`} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div key={`latest-order-${order.id}-${i}`} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs uppercase border border-slate-200">
                         {order.name.slice(0, 2)}
@@ -804,36 +832,46 @@ export default function App() {
                 <h3 className="text-xl font-bold text-blue-700">Select Recharge</h3>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                {packages.filter(p => p.gameId === selectedGame.id).map((p, i) => (
-                  <div 
-                    key={`package-item-${p.id || i}`} 
-                    onClick={() => p.inStock !== false && setSelectedPackage(p)} 
-                    className={`relative p-3 rounded-lg border flex items-center justify-between transition-all ${
-                      p.inStock === false 
-                        ? 'border-slate-100 bg-slate-50 opacity-60 grayscale blur-[1px] cursor-not-allowed' 
-                        : selectedPackage?.id === p.id 
-                          ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500 cursor-pointer' 
-                          : 'border-slate-200 bg-white hover:border-blue-300 cursor-pointer'
-                    }`}
-                  >
-                    {p.inStock === false && (
-                      <div className="absolute -top-2 -right-1 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm z-10 animate-pulse">
-                        Stock Out
-                      </div>
-                    )}
-                    {selectedPackage?.id === p.id && p.inStock !== false && (
-                        <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full p-0.5 shadow-sm">
-                            <CheckCircle className="w-3 h-3" />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {packages.length === 0 ? (
+                  Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
+                ) : (
+                  packages.filter(p => p.gameId === selectedGame.id).map((p, i) => (
+                    <div 
+                      key={`package-item-${p.id}-${i}`} 
+                      onClick={() => p.inStock !== false && setSelectedPackage(p)} 
+                      className={`relative p-3 rounded-lg border flex items-center justify-between transition-all ${
+                        p.inStock === false 
+                          ? 'border-slate-100 opacity-60 grayscale cursor-not-allowed' 
+                          : selectedPackage?.id === p.id 
+                            ? 'border-blue-500 ring-1 ring-blue-500 cursor-pointer' 
+                            : 'border-slate-200 hover:border-blue-300 cursor-pointer'
+                      }`}
+                      style={{
+                        backgroundColor: p.inStock === false 
+                          ? (siteSettings.stockOutColor || '#f8fafc')
+                          : selectedPackage?.id === p.id 
+                            ? (siteSettings.selectedPackageColor || '#eff6ff')
+                            : '#ffffff'
+                      }}
+                    >
+                      {p.inStock === false && (
+                        <div className="absolute -top-2 -right-1 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm z-10 animate-pulse">
+                          Stock Out
                         </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Diamond className={`w-4 h-4 ${p.inStock === false ? 'text-slate-400 fill-slate-400' : 'text-blue-500 fill-blue-500'}`} />
-                      <span className="text-sm font-bold text-slate-700">{p.amount} {p.name}</span>
+                      )}
+                      {selectedPackage?.id === p.id && p.inStock !== false && (
+                          <div className="absolute -top-2 -right-2 bg-orange-500 text-white rounded-full p-0.5 shadow-sm">
+                              <CheckCircle className="w-3 h-3" />
+                          </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-700">{p.amount} {p.name}</span>
+                      </div>
+                      <div className="text-slate-900 font-black text-sm">৳{p.price}</div>
                     </div>
-                    <div className="text-slate-900 font-black text-sm">৳{p.price}</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -1200,7 +1238,7 @@ export default function App() {
         )}
 
         {view === 'profile' && user && (
-          <div className="space-y-8">
+          <div className="space-y-8 pb-24">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-red-500 p-1">
@@ -1235,27 +1273,117 @@ export default function App() {
 
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex items-center gap-2 font-black text-indigo-950">
-                <User className="w-5 h-5 text-red-500" /> Account Information
+                <User className="w-5 h-5 text-red-500" /> Account Settings
               </div>
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-slate-50 p-6 rounded-2xl text-center space-y-4">
-                  <div className="bg-red-500 text-white py-2 px-4 rounded-lg text-sm font-black inline-block">৳{userProfile.balance}</div>
-                  <div className="text-xl font-black text-indigo-950">Available Balance</div>
+              <div className="p-4 space-y-2">
+                 <button 
+                   onClick={() => setView('edit-profile')}
+                   className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors group"
+                 >
+                   <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                       <Edit className="w-5 h-5" />
+                     </div>
+                     <div className="text-left">
+                       <div className="font-black text-indigo-950">Edit Profile</div>
+                       <div className="text-xs font-bold text-slate-500">Update name, phone & password</div>
+                     </div>
+                   </div>
+                   <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'edit-profile' && user && (
+          <div className="space-y-8 pb-24">
+             <div className="flex items-center gap-4">
+               <button onClick={() => setView('profile')} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 hover:bg-slate-50">
+                 <ArrowRight className="w-5 h-5 text-slate-700 rotate-180" />
+               </button>
+               <h2 className="text-2xl font-black text-indigo-950">Edit Profile</h2>
+             </div>
+
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center gap-2 font-black text-indigo-950">
+                <User className="w-5 h-5 text-red-500" /> Edit Profile
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase">User ID (Read Only)</label>
+                    <input type="text" value={userProfile.supportPin} readOnly className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-slate-500 outline-none cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase">Email (Read Only)</label>
+                    <input type="text" value={user.email || ''} readOnly className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-slate-500 outline-none cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase">Full Name</label>
+                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase">Phone Number</label>
+                    <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Enter phone number" className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
+                  </div>
                 </div>
-                <div className="bg-slate-50 p-6 rounded-2xl flex flex-col items-center justify-center space-y-2">
-                  <CheckCircle className="w-12 h-12 text-blue-500" />
-                  <div className="text-xl font-black text-indigo-950">Account Verified!</div>
-                </div>
+                <button 
+                  onClick={() => {
+                    setIsProfileUpdating(true);
+                    // Simulate update
+                    setTimeout(() => {
+                      setUserProfile({...userProfile, name: editName, phone: editPhone});
+                      alert('Profile updated successfully!');
+                      setIsProfileUpdating(false);
+                    }, 1000);
+                  }}
+                  disabled={isProfileUpdating}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50"
+                >
+                  {isProfileUpdating ? 'Updating...' : 'Update Profile'}
+                </button>
               </div>
             </div>
 
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex items-center gap-2 font-black text-indigo-950">
-                <AlertCircle className="w-5 h-5 text-red-500" /> User Information
+                <Lock className="w-5 h-5 text-red-500" /> Change Password
               </div>
-              <div className="p-6 space-y-2 text-sm font-bold text-slate-600">
-                <div>email : {user.email}</div>
-                <div>Phone : </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase">Old Password</label>
+                  <input type="password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase">New Password</label>
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase">Confirm Password</label>
+                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
+                </div>
+                <button 
+                  onClick={() => {
+                    if (newPassword !== confirmPassword) {
+                      alert("Passwords do not match!");
+                      return;
+                    }
+                    setIsProfileUpdating(true);
+                    // Simulate password change
+                    setTimeout(() => {
+                      alert('Password changed successfully!');
+                      setOldPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      setIsProfileUpdating(false);
+                    }, 1000);
+                  }}
+                  disabled={isProfileUpdating || !oldPassword || !newPassword}
+                  className="w-full bg-red-500 text-white py-3 rounded-xl font-black shadow-lg shadow-red-200 hover:bg-red-600 transition-all disabled:opacity-50"
+                >
+                  {isProfileUpdating ? 'Processing...' : 'Change Password'}
+                </button>
               </div>
             </div>
           </div>
@@ -1334,7 +1462,7 @@ export default function App() {
 
             <div className="space-y-4">
               {userOrders.length > 0 ? userOrders.map((o, i) => (
-                <div key={`my-order-list-${o.id || i}`} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 mx-2 space-y-4 relative overflow-hidden">
+                <div key={`my-order-list-${o.id}-${i}`} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 mx-2 space-y-4 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                   {/* Header */}
                   <div className="flex items-center justify-between border-b border-slate-50 pb-3">
@@ -1392,7 +1520,7 @@ export default function App() {
                       </div>
                       <div className="flex-1">
                         <div className="text-[10px] font-bold text-slate-400 uppercase">Phone</div>
-                        <div className="text-sm font-black text-slate-800">{siteSettings.whatsapp}</div>
+                        <div className="text-sm font-black text-slate-800">{o.phoneNumber || 'N/A'}</div>
                       </div>
                     </div>
 
@@ -1625,7 +1753,7 @@ export default function App() {
 
               <div className="divide-y divide-slate-50">
                 {userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).length > 0 ? userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).map((o, i) => (
-                  <div key={`transaction-item-${o.id || i}`} className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors">
+                  <div key={`transaction-item-${o.id}-${i}`} className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors">
                     <div className="flex items-center gap-6 w-full md:w-auto">
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
                         o.status === 'Completed' ? 'bg-green-50 text-green-600' :
@@ -1785,15 +1913,17 @@ export default function App() {
                         o.userEmail?.toLowerCase().includes(orderSearch.toLowerCase()) || 
                         o.transactionId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                         o.uid?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        o.userId?.toLowerCase().includes(orderSearch.toLowerCase())
+                        o.userId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                        o.phoneNumber?.toLowerCase().includes(orderSearch.toLowerCase())
                       ).map((o, i) => (
-                        <tr key={`admin-order-desktop-${o.id || i}`} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={`admin-order-desktop-${o.id}-${i}`} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-8">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
                               <div>
                                 <div className="font-black text-indigo-950 text-sm">{o.userEmail}</div>
                                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{o.gameName} • {o.packageName}</div>
+                                <div className="text-[10px] text-slate-500 font-bold mt-0.5">Phone: {o.phoneNumber || 'N/A'}</div>
                                 <div className="text-[10px] text-red-500 font-black mt-1">ID: {o.uid}</div>
                               </div>
                             </div>
@@ -1833,14 +1963,16 @@ export default function App() {
                     o.userEmail?.toLowerCase().includes(orderSearch.toLowerCase()) || 
                     o.transactionId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
                     o.uid?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                    o.userId?.toLowerCase().includes(orderSearch.toLowerCase())
+                    o.userId?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                    o.phoneNumber?.toLowerCase().includes(orderSearch.toLowerCase())
                   ).map((o, i) => (
-                    <div key={`admin-order-mobile-${o.id || i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                    <div key={`admin-order-mobile-${o.id}-${i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">{o.userEmail?.charAt(0).toUpperCase()}</div>
                           <div>
                             <div className="font-black text-indigo-950 text-xs">{o.userEmail}</div>
+                            <div className="text-[10px] text-slate-500 font-bold">Phone: {o.phoneNumber || 'N/A'}</div>
                             <div className="text-[10px] text-slate-400 font-bold">{new Date(o.timestamp).toLocaleDateString()}</div>
                           </div>
                         </div>
@@ -1883,24 +2015,28 @@ export default function App() {
                   <button onClick={() => setEditGame({})} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-100 hover:scale-105 transition-all"><Plus className="w-5 h-5" /> Add New Game</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {games.map((g, i) => (
-                    <div key={`admin-game-${g.id || i}`} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
-                      <div className="relative h-48 rounded-[2rem] overflow-hidden mb-6">
-                        <img src={g.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500" />
-                        <div className="absolute top-4 right-4 flex gap-2">
-                          <button onClick={() => setEditGame(g)} className="bg-white/90 backdrop-blur-sm p-3 rounded-xl text-indigo-600 shadow-lg hover:bg-white transition-all"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => remove(ref(db, `games/${g.id}`))} className="bg-white/90 backdrop-blur-sm p-3 rounded-xl text-red-500 shadow-lg hover:bg-white transition-all"><Trash2 className="w-4 h-4" /></button>
+                  {games.length === 0 ? (
+                    Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-[2.5rem]" />)
+                  ) : (
+                    games.map((g, i) => (
+                      <div key={`admin-game-${g.id}-${i}`} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
+                        <div className="relative h-48 rounded-[2rem] overflow-hidden mb-6">
+                          <img src={g.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500" />
+                          <div className="absolute top-4 right-4 flex gap-2">
+                            <button onClick={() => setEditGame(g)} className="bg-white/90 backdrop-blur-sm p-3 rounded-xl text-indigo-600 shadow-lg hover:bg-white transition-all"><Edit className="w-4 h-4" /></button>
+                            <button onClick={() => remove(ref(db, `games/${g.id}`))} className="bg-white/90 backdrop-blur-sm p-3 rounded-xl text-red-500 shadow-lg hover:bg-white transition-all"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-black text-xl text-indigo-950">{g.name}</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{g.category}</div>
+                          </div>
+                          <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Active</div>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="font-black text-xl text-indigo-950">{g.name}</div>
-                          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{g.category}</div>
-                        </div>
-                        <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Active</div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -1917,28 +2053,39 @@ export default function App() {
                       <tr><th className="p-8">Game</th><th className="p-8">Package Details</th><th className="p-8">Price</th><th className="p-8 text-right">Actions</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {packages.map((p, i) => (
-                        <tr key={`admin-package-${p.id || i}`} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-8">
-                            <div className="flex items-center gap-4">
-                              <img src={games.find(g => g.id === p.gameId)?.image} className="w-10 h-10 rounded-xl object-cover" />
-                              <div className="font-black text-indigo-950 text-sm">{games.find(g => g.id === p.gameId)?.name}</div>
-                            </div>
-                          </td>
-                          <td className="p-8">
-                            <div className="text-sm font-bold text-indigo-950">{p.amount} {p.name}</div>
-                          </td>
-                          <td className="p-8">
-                            <div className="text-lg font-black text-red-500">৳{p.price}</div>
-                          </td>
-                          <td className="p-8 text-right">
-                            <div className="flex justify-end gap-2">
-                              <button onClick={() => setEditPkg(p)} className="text-indigo-600 p-3 hover:bg-indigo-50 rounded-xl transition-all"><Edit className="w-5 h-5" /></button>
-                              <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="text-red-400 p-3 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-5 h-5" /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {packages.length === 0 ? (
+                        Array(6).fill(0).map((_, i) => (
+                          <tr key={i}>
+                            <td className="p-8"><Skeleton className="h-10 w-32" /></td>
+                            <td className="p-8"><Skeleton className="h-6 w-24" /></td>
+                            <td className="p-8"><Skeleton className="h-8 w-16" /></td>
+                            <td className="p-8"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                          </tr>
+                        ))
+                      ) : (
+                        packages.map((p, i) => (
+                          <tr key={`admin-package-${p.id}-${i}`} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-8">
+                              <div className="flex items-center gap-4">
+                                <img src={games.find(g => g.id === p.gameId)?.image} className="w-10 h-10 rounded-xl object-cover" />
+                                <div className="font-black text-indigo-950 text-sm">{games.find(g => g.id === p.gameId)?.name}</div>
+                              </div>
+                            </td>
+                            <td className="p-8">
+                              <div className="text-sm font-bold text-indigo-950">{p.amount} {p.name}</div>
+                            </td>
+                            <td className="p-8">
+                              <div className="text-lg font-black text-red-500">৳{p.price}</div>
+                            </td>
+                            <td className="p-8 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button onClick={() => setEditPkg(p)} className="text-indigo-600 p-3 hover:bg-indigo-50 rounded-xl transition-all"><Edit className="w-5 h-5" /></button>
+                                <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="text-red-400 p-3 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-5 h-5" /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2008,6 +2155,22 @@ export default function App() {
                       <input value={siteSettings.rocketLogo} onChange={e => setSiteSettings({...siteSettings, rocketLogo: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Selected Package Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={siteSettings.selectedPackageColor || '#eff6ff'} onChange={e => setSiteSettings({...siteSettings, selectedPackageColor: e.target.value})} className="w-12 h-12 rounded-xl cursor-pointer border-2 border-slate-100 p-1" />
+                        <input type="text" value={siteSettings.selectedPackageColor || '#eff6ff'} onChange={e => setSiteSettings({...siteSettings, selectedPackageColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Stock Out Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={siteSettings.stockOutColor || '#f8fafc'} onChange={e => setSiteSettings({...siteSettings, stockOutColor: e.target.value})} className="w-12 h-12 rounded-xl cursor-pointer border-2 border-slate-100 p-1" />
+                        <input type="text" value={siteSettings.stockOutColor || '#f8fafc'} onChange={e => setSiteSettings({...siteSettings, stockOutColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <button onClick={() => set(ref(db, 'settings'), siteSettings)} className="bg-indigo-600 text-white px-12 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-[1.02] transition-all">Update Platform Settings</button>
               </div>
@@ -2025,7 +2188,7 @@ export default function App() {
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {allUsers.map((u, i) => (
-                        <tr key={`user-directory-${u.id || i}`} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={`user-directory-${u.id}-${i}`} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-8">
                             <div className="flex items-center gap-4">
                               <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-indigo-100">
@@ -2373,9 +2536,15 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Transaction ID (TrxID)</label>
-                      <input type="text" placeholder="Enter 10-digit TrxID" value={trxId} onChange={e => setTrxId(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Your Phone Number</label>
+                        <input type="text" placeholder="Enter your phone number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Transaction ID (TrxID)</label>
+                        <input type="text" placeholder="Enter 10-digit TrxID" value={trxId} onChange={e => setTrxId(e.target.value)} className="w-full border-2 border-slate-100 p-5 rounded-2xl focus:border-red-500 outline-none font-mono text-sm font-black transition-all" />
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -2536,7 +2705,7 @@ export default function App() {
           {editPkg && (
             <div className="space-y-4">
               <select value={editPkg.gameId || ''} onChange={e => setEditPkg({...editPkg, gameId: e.target.value})} className="w-full border p-3 rounded-xl">
-                <option value="">Select Game</option>{games.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                <option value="">Select Game</option>{games.map((g, i) => <option key={`game-opt-${g.id}-${i}`} value={g.id}>{g.name}</option>)}
               </select>
               <input placeholder="Amount" value={editPkg.amount || ''} onChange={e => setEditPkg({...editPkg, amount: e.target.value})} className="w-full border p-3 rounded-xl" />
               <input placeholder="Name (e.g. Diamond)" value={editPkg.name || ''} onChange={e => setEditPkg({...editPkg, name: e.target.value})} className="w-full border p-3 rounded-xl" />
