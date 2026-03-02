@@ -537,7 +537,8 @@ export default function App() {
       name: editGame?.name, 
       image: editGame?.image, 
       category: editGame?.category,
-      description: editGame?.description || ''
+      description: editGame?.description || '',
+      isPremium: editGame?.isPremium || false
     });
     setEditGame(null);
   };
@@ -622,7 +623,10 @@ export default function App() {
                 <Zap className="w-6 h-6 fill-current text-red-500" />
               </div>
               <div>
-                <span className="text-xl font-black text-indigo-950 tracking-tighter leading-none block">STB</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl font-black text-indigo-950 tracking-tighter leading-none block">STB</span>
+                  <div className="bg-red-500 text-white text-[8px] font-black px-1 rounded animate-pulse">LIVE</div>
+                </div>
                 <span className="text-xs font-black text-red-500 tracking-[0.2em] leading-none block">TOPUP</span>
               </div>
             </div>
@@ -787,9 +791,9 @@ export default function App() {
                         >
                           <div className="relative aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50">
                             <img src={g.image} className="w-full h-full object-cover" />
-                            {idx < 3 && (
-                                <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg">
-                                    HOT
+                            {(g.isPremium || idx < 3) && (
+                                <div className={`absolute top-0 right-0 ${g.isPremium ? 'bg-yellow-400 text-indigo-950' : 'bg-red-500 text-white'} text-[8px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-wider shadow-sm`}>
+                                    {g.isPremium ? 'PREMIUM' : 'HOT'}
                                 </div>
                             )}
                           </div>
@@ -874,81 +878,139 @@ export default function App() {
 
         {view === 'game' && selectedGame && (
           <div className="space-y-6 pb-24">
-            {/* Gaming Banner Header */}
-            <div className="relative h-32 md:h-48 rounded-2xl overflow-hidden shadow-xl mb-6 group">
-              {/* Background with Overlay */}
-              <div className="absolute inset-0 bg-indigo-900">
-                <img 
-                  src={selectedGame.image} 
-                  className="w-full h-full object-cover opacity-40 blur-sm scale-110 group-hover:scale-100 transition-transform duration-1000" 
-                  alt="Banner Background"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-950/80 via-transparent to-indigo-950/80"></div>
-              </div>
-
-              {/* Content */}
-              <div className="absolute inset-0 flex items-center justify-between px-6 md:px-12">
-                {/* Left: Logo & Delivery Time */}
-                <div className="flex flex-col gap-2">
-                  <div className="w-16 h-16 md:w-24 md:h-24 bg-white p-1 rounded-2xl shadow-2xl border-2 border-white/20 overflow-hidden">
-                    <img src={selectedGame.image} className="w-full h-full object-cover rounded-xl" alt="Game Logo" />
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-lg flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                    <span className="text-[10px] md:text-xs font-black text-white tracking-tight">মাত্র ২ সেকেন্ডে ডেলিভারি</span>
-                  </div>
-                </div>
-
-                {/* Right: Game Name */}
-                <div className="text-right">
-                  <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter drop-shadow-2xl uppercase italic">
-                    {selectedGame.name}
-                  </h1>
-                  <div className="flex justify-end gap-2 mt-1">
-                    <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Official</div>
-                    <div className="bg-blue-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Instant</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Premium User Card */}
-            {selectedGame.isPremium && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-black text-indigo-950 ml-1">Premium User</h2>
-                <div className="bg-gradient-to-br from-amber-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-sm space-y-4 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-orange-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">বিশেষ অফার</div>
-                  
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div className="space-y-2 flex-1">
-                      <h3 className="text-lg font-black text-indigo-950 leading-tight">এই প্রোডাক্টটি শুধু বিশেষ ইউজারদের জন্য আনলক হবে</h3>
-                      <p className="text-[11px] font-bold text-slate-600 leading-relaxed">আপনার অ্যাকাউন্ট থেকে মোট <span className="text-red-600">৳{siteSettings.premiumThreshold || 10000}</span> বা তার বেশি টপ-আপ করলেই এই অফারটি আপনার জন্য স্থায়ীভাবে আনলক হয়ে যাবে।</p>
+            {selectedGame.isPremium ? (
+              <div className="space-y-4 pt-2">
+                {/* Premium Hero Banner (Aesthetic from Screenshot 1) */}
+                <div className="relative h-32 md:h-40 rounded-2xl overflow-hidden shadow-xl mb-4 group">
+                  <div className="absolute inset-0 bg-[#1A1A3D]">
+                    <img 
+                      src={selectedGame.image} 
+                      className="w-full h-full object-cover opacity-20 blur-sm scale-110" 
+                      alt="Banner Background"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#1A1A3D] via-transparent to-[#1A1A3D]"></div>
+                    {/* Floating "ONLY PREMIUM" text in background */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                        <span className="text-[120px] font-black text-white/5 uppercase italic tracking-tighter whitespace-nowrap">ONLY PREMIUM</span>
                     </div>
+                  </div>
+
+                  <div className="absolute inset-0 flex items-center justify-between px-6 md:px-10">
+                    <div className="flex flex-col gap-2">
+                      <div className="relative">
+                        <div className="w-20 h-20 md:w-24 md:h-24 bg-white p-1 rounded-2xl shadow-2xl border-2 border-white/20 overflow-hidden">
+                          <img src={selectedGame.image} className="w-full h-full object-cover rounded-xl" alt="Game Logo" />
+                          {/* Crown Icon on Logo */}
+                          <div className="absolute top-2 left-1/2 -translate-x-1/2 -translate-y-1">
+                             <div className="bg-yellow-400 text-[#1A1A3D] p-0.5 rounded-full shadow-lg">
+                                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z"/></svg>
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-black/40 backdrop-blur-md border border-white/20 rounded-full px-3 py-1 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider">মাত্র ২ সেকেন্ডে ডেলিভারি</span>
+                      </div>
+                    </div>
+
                     <div className="text-right flex flex-col items-end">
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">আপনার মোট খরচ: <span className="text-green-600 font-black">৳{userProfile.totalSpent || 0}</span></div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">আরও <span className="text-red-600 font-black">৳{Math.max(0, (siteSettings.premiumThreshold || 10000) - (userProfile.totalSpent || 0))}</span> টপ-আপ করলেই অফারটি আনলক হবে</div>
+                      <h2 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-none uppercase">
+                        PREMIUM <span className="text-white">USER</span>
+                      </h2>
+                      <div className="flex gap-2 mt-3">
+                        <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded uppercase tracking-widest shadow-lg">Official</div>
+                        <div className="bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded uppercase tracking-widest shadow-lg">Instant</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* VIP Progress Board (Aesthetic from Screenshot 2) */}
+                <div className="bg-[#FFF9E6] p-6 rounded-[28px] border border-[#FFD699] shadow-sm space-y-5 relative overflow-hidden">
+                  {/* Decorative background pattern */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-orange-100/30 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                  
+                  {/* Special Offer Badge */}
+                  <div className="absolute -top-0 right-8 bg-[#FF5C33] text-white text-[10px] font-black px-5 py-2 rounded-b-2xl shadow-md z-10">
+                    বিশেষ অফার
+                  </div>
+                  
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 pt-2">
+                    <div className="space-y-2 flex-1">
+                      <h3 className="text-2xl font-black text-[#4D2600] leading-tight">এই প্রোডাক্টটি শুধু বিশেষ ইউজারদের জন্য আনলক হবে</h3>
+                      <p className="text-[14px] font-bold text-[#664D00] leading-relaxed max-w-2xl">
+                        আপনার অ্যাকাউন্ট থেকে মোট <span className="text-[#FF3300] font-black">৳{siteSettings.premiumThreshold || 10000}</span> বা তার বেশি টপ-আপ করলেই এই অফারটি আপনার জন্য স্থায়ীভাবে আনলক হয়ে যাবে।
+                      </p>
+                    </div>
+                    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-[#FFD699]/50 flex flex-col items-end justify-center min-w-[200px]">
+                      <div className="text-sm font-black text-[#4D2600]">আপনার মোট খরচ: <span className="text-[#009966] text-lg">৳{userProfile.totalSpent || 0}</span></div>
+                      <div className="text-[11px] font-black text-[#664D00] mt-1 text-right">
+                        আরও <span className="text-[#FF3300] text-sm">৳{(Math.max(0, (siteSettings.premiumThreshold || 10000) - (userProfile.totalSpent || 0))).toFixed(2)}</span> টপ-আপ করলেই অফারটি আনলক হবে
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest">
-                      <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-orange-500" /> প্রোগ্রেস</span>
-                      <span className="bg-white/50 px-2 py-0.5 rounded-full">{Math.min(100, Math.round(((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100))}%</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-end text-[#4D2600]">
+                      <span className="text-sm font-black uppercase tracking-wider">প্রোগ্রেস</span>
+                      <span className="text-xl font-black">
+                        {Math.min(100, Math.round(((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100))}%
+                      </span>
                     </div>
-                    <div className="h-4 bg-white/50 rounded-full overflow-hidden border border-orange-200 p-0.5 shadow-inner">
+                    <div className="h-4 bg-[#FFEBB3] rounded-full overflow-hidden p-1 border border-[#FFD699]">
                       <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(100, ((userProfile.totalSpent || 0) / (siteSettings.premiumThreshold || 10000)) * 100)}%` }}
-                        className="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 rounded-full shadow-sm relative"
-                      >
-                         <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]"></div>
-                      </motion.div>
+                        className="h-full bg-gradient-to-r from-[#FFA500] to-[#FF5C33] rounded-full shadow-inner"
+                      />
                     </div>
                   </div>
-                  <p className="text-[10px] font-bold text-slate-500 italic flex items-center gap-1.5">
-                    <AlertCircle className="w-3 h-3 text-orange-500" />
-                    একটু একটু করে টপ-আপ করলেই এই অফারটির জন্য <span className="text-indigo-600 font-black">LOYALTY ACCESS</span> আনলক হয়ে যাবে।
-                  </p>
+                  
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="w-2 h-2 bg-[#FF5C33] rounded-full"></div>
+                    <p className="text-[12px] font-bold text-[#664D00]">
+                      একটু একটু করে টপ-আপ করলেই এই প্রোডাক্টের জন্য <span className="font-black text-[#4D2600] underline decoration-[#FF5C33] decoration-2 underline-offset-4">ভিআইপি এক্সেস</span> আনলক হয়ে যাবে।
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Gaming Banner Header for Normal Games */
+              <div className="relative h-32 md:h-48 rounded-2xl overflow-hidden shadow-xl mb-6 group">
+                {/* Background with Overlay */}
+                <div className="absolute inset-0 bg-indigo-900">
+                  <img 
+                    src={selectedGame.image} 
+                    className="w-full h-full object-cover opacity-40 blur-sm scale-110 group-hover:scale-100 transition-transform duration-1000" 
+                    alt="Banner Background"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-950/80 via-transparent to-indigo-950/80"></div>
+                </div>
+
+                {/* Content */}
+                <div className="absolute inset-0 flex items-center justify-between px-6 md:px-12">
+                  {/* Left: Logo & Delivery Time */}
+                  <div className="flex flex-col gap-2">
+                    <div className="w-16 h-16 md:w-24 md:h-24 bg-white p-1 rounded-2xl shadow-2xl border-2 border-white/20 overflow-hidden">
+                      <img src={selectedGame.image} className="w-full h-full object-cover rounded-xl" alt="Game Logo" />
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                      <span className="text-[10px] md:text-xs font-black text-white tracking-tight">মাত্র ২ সেকেন্ডে ডেলিভারি</span>
+                    </div>
+                  </div>
+
+                  {/* Right: Game Name */}
+                  <div className="text-right">
+                    <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter drop-shadow-2xl uppercase italic">
+                      {selectedGame.name}
+                    </h1>
+                    <div className="flex justify-end gap-2 mt-1">
+                      <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Official</div>
+                      <div className="bg-blue-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Instant</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1164,14 +1226,59 @@ export default function App() {
                 <h3 className="text-2xl font-black text-blue-700">Description</h3>
               </div>
               
-              <div className="space-y-4 text-sm font-bold text-slate-700">
-                {selectedGame.description ? (
-                  <div className="prose prose-sm max-w-none text-slate-700 font-bold whitespace-pre-wrap">
-                    {selectedGame.description}
+              <div className="space-y-4 text-sm font-bold text-slate-700 border border-slate-100 rounded-xl p-6">
+                {selectedGame.isPremium ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-indigo-950 font-black text-lg">
+                      <span>🚩</span> Premium User Loyalty Discount
+                    </div>
+                    <div className="text-slate-600 leading-relaxed">
+                      যেসব গ্রাহক আমাদের কাছ থেকে মোট <span className="text-red-500 font-black">৳{siteSettings.premiumThreshold || 10000}</span> বা তার বেশি মূল্যের পণ্য ক্রয় করেছেন, তারা <span className="font-black">Premium User Loyalty Discount</span> অফারটি পাওয়ার যোগ্য হবেন। নির্ধারিত পরিমাণ টাকার টপ-আপ সম্পন্ন হলে, আপনি পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট উপভোগ করতে পারবেন।
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-indigo-950 font-black">
+                        <span>💥</span> অফারের বিস্তারিত:
+                      </div>
+                      <ul className="space-y-2 ml-2">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                          <span>শুধুমাত্র বিশ্বস্ত গ্রাহকদের জন্য প্রিমিয়াম পুরস্কার</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                          <span>আমাদের থেকে মোট ৳{siteSettings.premiumThreshold || 10000} টাকার কেনাকাটা থাকতে হবে</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                          <span>পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট প্রযোজ্য হবে</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                          <span>একজন গ্রাহক ২৪ ঘণ্টার মধ্যে যেকোনো সর্বোচ্চ ২ টি প্যাকেজ অর্ডার করতে পারবেন</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                          <span>প্রচলিত শর্ত অনুযায়ী অফার কার্যকর হবে</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                          <span>শুধুমাত্র ভেরিফাইড গ্রাহকদের জন্য প্রযোজ্য</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="w-4 h-4 flex items-center justify-center mt-0.5">📜</div>
+                          <span className="font-black">শর্তাবলী পরিবর্তনের অধিকার</span>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div className="text-slate-500 text-xs italic leading-relaxed pt-4 border-t border-slate-50">
+                      আমরা প্রয়োজনে এই অফারের শর্তাবলী, সুবিধা বা মেয়াদ যে কোনো সময় পূর্ব নোটিশ ছাড়াই পরিবর্তন, সংশোধন বা বাতিল করার অধিকার সংরক্ষণ করি। এই অফার সংক্রান্ত আমাদের সিদ্ধান্তই চূড়ান্ত বলে গণ্য হবে।
+                    </div>
                   </div>
                 ) : (
                   <div className="whitespace-pre-wrap leading-relaxed">
-                    {siteSettings.loyaltyRules}
+                    {selectedGame.description || siteSettings.loyaltyRules}
                   </div>
                 )}
               </div>
@@ -2173,7 +2280,9 @@ export default function App() {
                             <div className="font-black text-xl text-indigo-950">{g.name}</div>
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{g.category}</div>
                           </div>
-                          <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Active</div>
+                          <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase ${g.isPremium ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-50 text-indigo-600'}`}>
+                            {g.isPremium ? 'Premium' : 'Active'}
+                          </div>
                         </div>
                       </div>
                     ))
