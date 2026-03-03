@@ -347,7 +347,16 @@ export default function App() {
     });
     onValue(ref(db, 'settings'), (s) => {
       const d = s.val();
-      if (d) setSiteSettings(d);
+      if (d) {
+        setSiteSettings(prev => ({
+          ...prev,
+          ...d,
+          sliderImages: d.sliderImages || prev.sliderImages || [],
+          categorySort: d.categorySort || prev.categorySort || [],
+          homeBanners: d.homeBanners || prev.homeBanners || [],
+          sliderInterval: d.sliderInterval || prev.sliderInterval || 3000
+        }));
+      }
     });
     onValue(ref(db, 'users'), (s) => {
       const d = s.val();
@@ -2484,8 +2493,9 @@ export default function App() {
                               placeholder="Image URL" 
                               value={slide.url} 
                               onChange={e => {
-                                const newSlides = [...siteSettings.sliderImages];
-                                newSlides[index].url = e.target.value;
+                                const newSlides = siteSettings.sliderImages.map((s, i) => 
+                                  i === index ? { ...s, url: e.target.value } : s
+                                );
                                 setSiteSettings({...siteSettings, sliderImages: newSlides});
                               }} 
                               className="w-full border-2 border-slate-100 p-3 rounded-xl text-xs font-bold focus:border-indigo-600 outline-none" 
@@ -2494,8 +2504,9 @@ export default function App() {
                               placeholder="Link URL (Optional)" 
                               value={slide.link || ''} 
                               onChange={e => {
-                                const newSlides = [...siteSettings.sliderImages];
-                                newSlides[index].link = e.target.value;
+                                const newSlides = siteSettings.sliderImages.map((s, i) => 
+                                  i === index ? { ...s, link: e.target.value } : s
+                                );
                                 setSiteSettings({...siteSettings, sliderImages: newSlides});
                               }} 
                               className="w-full border-2 border-slate-100 p-3 rounded-xl text-xs font-bold focus:border-indigo-600 outline-none" 
