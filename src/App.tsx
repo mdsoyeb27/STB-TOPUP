@@ -18,6 +18,7 @@ import {
   Gamepad2,
   Smartphone,
   Globe,
+  Code,
   Plus,
   Edit,
   History,
@@ -117,6 +118,10 @@ interface SiteSettings {
   homeBanners?: string[];
   noticeColor?: string;
   noticeTextColor?: string;
+  developerName?: string;
+  developerImage?: string;
+  developerDescription?: string;
+  developerLink?: string;
 }
 
 interface UserProfile {
@@ -165,6 +170,10 @@ export default function App() {
     homeBanners: [],
     noticeColor: '#6366f1',
     noticeTextColor: '#ffffff',
+    developerName: 'Developer',
+    developerImage: 'https://ui-avatars.com/api/?name=Dev&background=000&color=fff',
+    developerDescription: 'Full Stack Developer & UI/UX Designer',
+    developerLink: '#',
     loyaltyRules: `
 🚩 Premium User Loyalty Discount
 যেসব গ্রাহক আমাদের কাছ থেকে মোট ১০,০০০ বা তার বেশি মূল্যের পণ্য ক্রয় করেছেন, তারা Premium User Loyalty Discount অফারটি পাওয়ার যোগ্য হবেন। নির্ধারিত পরিমাণ টাকার টপ-আপ সম্পন্ন হলে, আপনি পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট উপভোগ করতে পারবেন।
@@ -647,15 +656,15 @@ export default function App() {
               </button>
             )}
             <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setView('home'); setSelectedGame(null); }}>
-              <div className="w-10 h-10 bg-indigo-950 rounded-xl flex items-center justify-center text-white group-hover:rotate-12 transition-transform shadow-lg shadow-indigo-900/20">
-                <Zap className="w-6 h-6 fill-current text-red-500" />
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-lg shadow-indigo-900/20 group-hover:rotate-12 transition-transform">
+                <img src={siteSettings.siteLogo} className="w-full h-full object-contain" alt="Logo" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xl font-black text-indigo-950 tracking-tighter leading-none block">STB</span>
+                  <span className="text-xl font-black text-indigo-950 tracking-tighter leading-none block">{siteSettings.siteName.split(' ')[0]}</span>
                   <div className="bg-red-500 text-white text-[8px] font-black px-1 rounded animate-pulse">LIVE</div>
                 </div>
-                <span className="text-xs font-black text-red-500 tracking-[0.2em] leading-none block">TOPUP</span>
+                <span className="text-xs font-black text-red-500 tracking-[0.2em] leading-none block">{siteSettings.siteName.split(' ').slice(1).join(' ') || 'TOPUP'}</span>
               </div>
             </div>
           </div>
@@ -737,6 +746,9 @@ export default function App() {
                 </button>
                 <button onClick={() => { setView('privacy'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
                   <ShieldCheck className="w-5 h-5 text-indigo-600" /> Privacy Policy
+                </button>
+                <button onClick={() => { setView('developer'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
+                  <Code className="w-5 h-5 text-indigo-600" /> Developer
                 </button>
                 <button onClick={() => { window.open(`https://wa.me/${siteSettings.whatsapp}`); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
                   <MessageCircle className="w-5 h-5 text-indigo-600" /> Contact Us
@@ -939,6 +951,103 @@ export default function App() {
               <div className="p-4 text-center border-t border-slate-100">
                 <button className="text-slate-400 text-xs font-bold">Showing 10 recent orders</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'developer' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Developer Hero Section */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-indigo-950 shadow-2xl">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-indigo-900/90 to-purple-900/80"></div>
+              
+              <div className="relative p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+                  <div className="relative w-40 h-40 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white/10 shadow-2xl">
+                    <img 
+                      src={siteSettings.developerImage} 
+                      className="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110" 
+                      alt={siteSettings.developerName} 
+                    />
+                  </div>
+                  <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-green-500 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-indigo-950 animate-pulse"></div>
+                </div>
+                
+                <div className="flex-1 text-center md:text-left space-y-4">
+                  <div className="inline-block px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-black text-pink-400 uppercase tracking-widest mb-2">
+                    Lead Developer
+                  </div>
+                  <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none">
+                    {siteSettings.developerName}
+                  </h1>
+                  <p className="text-lg md:text-xl text-indigo-200 font-medium max-w-2xl leading-relaxed">
+                    {siteSettings.developerDescription}
+                  </p>
+                  
+                  <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-4">
+                    <button onClick={() => window.open(siteSettings.developerLink)} className="bg-white text-indigo-950 px-8 py-3 rounded-xl font-black shadow-lg shadow-white/10 hover:bg-indigo-50 transition-all active:scale-95 flex items-center gap-2">
+                      <Globe className="w-5 h-5" /> Visit Portfolio
+                    </button>
+                    <button onClick={() => window.open(`https://wa.me/${siteSettings.whatsapp}`)} className="bg-white/10 text-white px-8 py-3 rounded-xl font-black backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2">
+                      <MessageCircle className="w-5 h-5" /> Contact Me
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tech Stack & Credits */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <Code className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-800">Tech Stack</h3>
+                </div>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  This platform is built with cutting-edge technologies to ensure maximum performance, security, and scalability.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {['React', 'TypeScript', 'Tailwind CSS', 'Firebase', 'Framer Motion', 'Vite', 'Node.js'].map((tech) => (
+                    <span key={tech} className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider border border-slate-100">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-800">About Platform</h3>
+                </div>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  {siteSettings.siteName} is a state-of-the-art digital goods marketplace designed to provide instant top-ups and secure transactions for gamers in Bangladesh.
+                </p>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                    <div className="text-2xl font-black text-indigo-600">100%</div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure</div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                    <div className="text-2xl font-black text-indigo-600">24/7</div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Support</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Credit */}
+            <div className="text-center pt-8 pb-4">
+              <p className="text-slate-400 text-sm font-bold">
+                Designed & Developed with <span className="text-red-500">❤</span> by <span className="text-indigo-600 font-black">{siteSettings.developerName}</span>
+              </p>
+              <p className="text-slate-300 text-xs font-bold mt-1">© {new Date().getFullYear()} All Rights Reserved.</p>
             </div>
           </div>
         )}
@@ -2641,6 +2750,28 @@ export default function App() {
                       />
                       <p className="text-[10px] text-slate-400 font-bold italic mt-1">These banners will appear right below the main slider.</p>
                     </div>
+
+                    <div className="col-span-1 md:col-span-2 space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-100 mt-4">
+                      <h4 className="text-lg font-black text-indigo-950">Developer Page Settings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Developer Name</label>
+                          <input value={siteSettings.developerName || ''} onChange={e => setSiteSettings({...siteSettings, developerName: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Developer Image URL</label>
+                          <input value={siteSettings.developerImage || ''} onChange={e => setSiteSettings({...siteSettings, developerImage: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Developer Description</label>
+                          <textarea value={siteSettings.developerDescription || ''} onChange={e => setSiteSettings({...siteSettings, developerDescription: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" rows={3} />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Developer Portfolio/Contact Link</label>
+                          <input value={siteSettings.developerLink || ''} onChange={e => setSiteSettings({...siteSettings, developerLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => set(ref(db, 'settings'), siteSettings)} className="bg-indigo-600 text-white px-12 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-[1.02] transition-all">Update Platform Settings</button>
@@ -2931,8 +3062,10 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="space-y-6">
             <div className="flex items-center gap-2">
-              <Zap className="text-red-500 w-8 h-8 fill-current" />
-              <span className="text-2xl font-black">STB <span className="text-red-500">TOPUP</span></span>
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden">
+                <img src={siteSettings.siteLogo} className="w-full h-full object-contain" alt="Logo" />
+              </div>
+              <span className="text-2xl font-black">{siteSettings.siteName}</span>
             </div>
             <p className="text-slate-400 font-bold text-sm leading-relaxed">The most trusted gaming top-up platform in Bangladesh. Fast, secure, and reliable service for all your favorite games.</p>
             <div className="flex gap-4">
