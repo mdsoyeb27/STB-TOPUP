@@ -61,6 +61,7 @@ import { Modal } from './components/Modal';
 import { Skeleton } from './components/Skeleton';
 import { BotProvider } from './context/BotContext';
 import BotWidget from './components/BotWidget';
+import InstallPWA from './components/InstallPWA';
 
 // Mock Data for Latest Orders
 const latestOrders = [
@@ -3459,6 +3460,7 @@ export default function App() {
           set(ref(db, 'packages'), [...packages, newPkg]);
         }}
       />
+      <InstallPWA />
       <BottomNav view={view} setView={setView} setIsSidebarOpen={setIsSidebarOpen} />
       <div className="md:hidden h-20"></div>
     </div>
