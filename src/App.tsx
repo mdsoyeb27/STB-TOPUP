@@ -115,7 +115,10 @@ interface SiteSettings {
   loyaltyRules?: string;
   categorySort?: string[];
   homeBanners?: string[];
+  noticeColor?: string;
+  noticeTextColor?: string;
 }
+
 interface UserProfile {
   name: string;
   phone?: string;
@@ -160,6 +163,8 @@ export default function App() {
     premiumThreshold: 10000,
     categorySort: [],
     homeBanners: [],
+    noticeColor: '#6366f1',
+    noticeTextColor: '#ffffff',
     loyaltyRules: `
 🚩 Premium User Loyalty Discount
 যেসব গ্রাহক আমাদের কাছ থেকে মোট ১০,০০০ বা তার বেশি মূল্যের পণ্য ক্রয় করেছেন, তারা Premium User Loyalty Discount অফারটি পাওয়ার যোগ্য হবেন। নির্ধারিত পরিমাণ টাকার টপ-আপ সম্পন্ন হলে, আপনি পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট উপভোগ করতে পারবেন।
@@ -626,29 +631,6 @@ export default function App() {
   return (
     <BotProvider>
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Notice Bar */}
-      <AnimatePresence>
-        {siteSettings.notice && (
-          <motion.div 
-            key="notice-bar"
-            initial={{ height: 0, opacity: 0 }} 
-            animate={{ height: 'auto', opacity: 1 }} 
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-indigo-950 text-white text-xs md:text-sm py-3 px-4 flex items-center justify-between overflow-hidden relative shadow-md z-50"
-          >
-            <div className="flex items-center gap-3 w-full overflow-hidden">
-                <div className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider shrink-0 animate-pulse">Notice</div>
-                <div className="flex-1 overflow-hidden relative h-5">
-                    <div className="absolute whitespace-nowrap animate-marquee font-bold text-slate-200">
-                        {siteSettings.notice}
-                    </div>
-                </div>
-            </div>
-            <button onClick={() => setSiteSettings({...siteSettings, notice: ''})} className="hover:bg-white/10 p-1 rounded-full transition-colors ml-4 shrink-0"><X className="w-4 h-4" /></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
@@ -776,21 +758,44 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {view === 'home' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
+            {/* Notice Board */}
+            <AnimatePresence>
+              {siteSettings.notice && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="p-4 rounded-xl relative shadow-lg"
+                  style={{ backgroundColor: siteSettings.noticeColor || '#6366f1', color: siteSettings.noticeTextColor || '#ffffff' }}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-bold">Notice:</h3>
+                    <button onClick={() => setSiteSettings({...siteSettings, notice: ''})} className="hover:bg-white/20 p-1 rounded-full transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-sm font-medium leading-relaxed opacity-90">
+                    {siteSettings.notice}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Hero Slider */}
-            <section className="relative h-48 md:h-80 rounded-3xl overflow-hidden shadow-lg group">
-              <div className="relative w-full h-full">
+            <section className="relative w-full rounded-xl overflow-hidden shadow-lg group">
+              <div className="relative w-full aspect-[21/9]">
                 {siteSettings.sliderImages.map((img, i) => (
                   <div 
                     key={img.id || `slide-${i}`}
-                    className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                    className={`absolute inset-0 transition-opacity duration-500 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   >
                     {typeof img.link === 'string' && img.link.trim() !== '' ? (
                       <a href={img.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                        <img src={img.url} className="w-full h-full object-cover" alt={`Slide ${i + 1}`} />
+                        <img src={img.url} className="w-full h-full object-contain bg-slate-900" alt={`Slide ${i + 1}`} />
                       </a>
                     ) : (
-                      <img src={img.url} className="w-full h-full object-cover" alt={`Slide ${i + 1}`} />
+                      <img src={img.url} className="w-full h-full object-contain bg-slate-900" alt={`Slide ${i + 1}`} />
                     )}
                   </div>
                 ))}
@@ -802,16 +807,9 @@ export default function App() {
                   <button 
                     key={img.id || `indicator-${i}`}
                     onClick={() => setCurrentSlide(i)}
-                    className={`w-2 h-2 rounded-full transition-all ${i === currentSlide ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'}`}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-white' : 'w-4 bg-white/50 hover:bg-white/80'}`}
                   />
                 ))}
-              </div>
-
-              {/* Simple Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-6 pointer-events-none z-10">
-                 <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-bold border border-white/20">
-                    Welcome to {siteSettings.siteName}
-                 </div>
               </div>
             </section>
 
@@ -2458,6 +2456,22 @@ export default function App() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notice Bar Content</label>
                     <textarea value={siteSettings.notice} onChange={e => setSiteSettings({...siteSettings, notice: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" rows={3} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notice Background Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={siteSettings.noticeColor || '#6366f1'} onChange={e => setSiteSettings({...siteSettings, noticeColor: e.target.value})} className="w-12 h-12 rounded-xl cursor-pointer border-2 border-slate-100 p-1" />
+                        <input type="text" value={siteSettings.noticeColor || '#6366f1'} onChange={e => setSiteSettings({...siteSettings, noticeColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notice Text Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={siteSettings.noticeTextColor || '#ffffff'} onChange={e => setSiteSettings({...siteSettings, noticeTextColor: e.target.value})} className="w-12 h-12 rounded-xl cursor-pointer border-2 border-slate-100 p-1" />
+                        <input type="text" value={siteSettings.noticeTextColor || '#ffffff'} onChange={e => setSiteSettings({...siteSettings, noticeTextColor: e.target.value})} className="flex-1 border-2 border-slate-100 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Slider Management Section */}
