@@ -323,7 +323,7 @@ export default function App() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-flash-latest',
         contents: [{ parts: [{ text: `Write a short, exciting description for the mobile game "${editGame.name}". Max 2 sentences.` }] }]
       });
       const text = response.text;
@@ -2947,7 +2947,7 @@ export default function App() {
                               Keep it concise (max 3 sentences).
                             `;
                             const response = await ai.models.generateContent({
-                              model: 'gemini-3-flash-preview',
+                              model: 'gemini-flash-latest',
                               contents: [{ parts: [{ text: prompt }] }]
                             });
                             setAiResponse(response.text || 'Order found successfully.');

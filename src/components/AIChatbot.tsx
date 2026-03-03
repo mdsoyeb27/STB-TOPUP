@@ -59,7 +59,7 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const model = 'gemini-3-flash-preview'; // Using the latest stable flash preview model
+      const modelName = 'gemini-flash-latest';
       
       let systemInstruction = '';
       
@@ -110,13 +110,17 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
         parts: [{ text: msg.text }]
       }));
 
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: [...history, { role: 'user', parts: [{ text: userMsg.text }] }],
-        config: { systemInstruction }
+      const chat = ai.chats.create({
+        model: modelName,
+        config: { systemInstruction },
+        history: history
       });
 
-      const responseText = response.text || "I'm sorry, I couldn't process that.";
+      const result = await chat.sendMessage({
+        message: userMsg.text
+      });
+
+      const responseText = result.text || "I'm sorry, I couldn't process that.";
 
       // Check for JSON action (Admin only)
       if (isAdmin && responseText.includes('ADD_PACKAGE')) {
