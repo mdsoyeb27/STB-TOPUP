@@ -94,7 +94,13 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
         2. Pricing: Use the package list.
         3. General Support.
 
-        Tone: Friendly, Professional, Banglish allowed.
+        **Language & Tone:**
+        - You MUST support both **Bengali (Bangla)** and **English**.
+        - If the user asks in Bengali, **reply in Bengali**.
+        - If the user asks in English, reply in English.
+        - You can use "Banglish" if the user does.
+        - Be friendly, professional, and helpful.
+
         If asked about an order not in the list, ask for the Order ID.
         `;
       }
@@ -165,13 +171,9 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-20 right-4 md:bottom-8 md:right-8 z-50 ${isAdmin ? 'bg-slate-900' : 'bg-indigo-600'} text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center ${isOpen ? 'hidden' : 'flex'}`}
+        className={`fixed bottom-28 right-4 md:bottom-8 md:right-8 z-[60] ${isAdmin ? 'bg-slate-900' : 'bg-indigo-600'} text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center ${isOpen ? 'hidden' : 'flex'}`}
       >
         {isAdmin ? <Bot className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
-        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-        </span>
       </motion.button>
 
       {/* Chat Window */}
@@ -185,36 +187,36 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
             className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-50 w-[90vw] md:w-96 h-[500px] max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className={`${isAdmin ? 'bg-slate-900' : 'bg-indigo-950'} p-4 flex items-center justify-between text-white`}>
-              <div className="flex items-center gap-2">
-                <div className={`${isAdmin ? 'bg-slate-800' : 'bg-indigo-800'} p-2 rounded-lg`}>
-                  {isAdmin ? <Sparkles className="w-5 h-5 text-yellow-400" /> : <Bot className="w-5 h-5 text-indigo-200" />}
+            <div className={`${isAdmin ? 'bg-slate-900' : 'bg-indigo-600'} p-6 flex items-center justify-between text-white`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                  {isAdmin ? <Sparkles className="w-6 h-6 text-yellow-400" /> : <Bot className="w-6 h-6 text-indigo-100" />}
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">{isAdmin ? 'Admin Copilot' : 'STB AI Assistant'}</h3>
-                  <div className="flex items-center gap-1 text-[10px] text-indigo-300">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                    Online
+                  <h3 className="font-black text-sm tracking-tight">{isAdmin ? 'Admin Copilot' : 'STB Assistant'}</h3>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/70 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                    Online Now
                   </div>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                    className={`max-w-[85%] p-4 rounded-3xl text-sm font-medium leading-relaxed ${
                       msg.sender === 'user'
-                        ? (isAdmin ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-indigo-600 text-white rounded-tr-none')
-                        : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none shadow-sm'
+                        ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg shadow-indigo-500/20'
+                        : 'bg-slate-100 text-slate-700 rounded-tl-none'
                     }`}
                   >
                     {msg.text}
@@ -223,29 +225,51 @@ export default function AIChatbot({ isAdmin, orders, packages, user, onAddPackag
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex gap-1">
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <div className="bg-slate-100 p-4 rounded-3xl rounded-tl-none flex gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                   </div>
+                </div>
+              )}
+              
+              {!isAdmin && messages.length === 1 && (
+                <div className="flex flex-wrap gap-2 pt-4">
+                  {[
+                    'Check Order Status',
+                    'How to Topup?',
+                    'Payment Methods',
+                    'Contact Support'
+                  ].map((action) => (
+                    <button
+                      key={action}
+                      onClick={() => {
+                        setInputText(action);
+                        handleSendMessage();
+                      }}
+                      className="text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all"
+                    >
+                      {action}
+                    </button>
+                  ))}
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-slate-100 flex gap-2">
+            <form onSubmit={handleSendMessage} className="p-4 bg-white/50 backdrop-blur-md border-t border-slate-100 flex gap-2">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={isAdmin ? "Command me (e.g., 'Add 100 diamonds for 80tk')" : "Ask anything..."}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                placeholder={isAdmin ? "Command me..." : "How can I help?"}
+                className="flex-1 bg-slate-100 border-none rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all"
               />
               <button
                 type="submit"
                 disabled={!inputText.trim() || isTyping}
-                className={`${isAdmin ? 'bg-slate-900 hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700'} text-white p-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+                className="btn-primary !p-3 !rounded-2xl disabled:opacity-50"
               >
                 <Send className="w-5 h-5" />
               </button>

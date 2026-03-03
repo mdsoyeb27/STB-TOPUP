@@ -58,6 +58,8 @@ import AIChatbot from './components/AIChatbot';
 import BottomNav from './components/BottomNav';
 import { Modal } from './components/Modal';
 import { Skeleton } from './components/Skeleton';
+import { BotProvider } from './context/BotContext';
+import BotWidget from './components/BotWidget';
 
 // Mock Data for Latest Orders
 const latestOrders = [
@@ -98,7 +100,8 @@ interface SiteSettings {
   nagadNumber: string;
   rocketNumber: string;
   upayNumber: string;
-  sliderImages: string[];
+  sliderImages: { id: string; url: string; link?: string }[];
+  sliderInterval: number;
   bkashLogo: string;
   nagadLogo: string;
   rocketLogo: string;
@@ -130,6 +133,7 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
     notice: 'Notice: এখন থেকে আমাদের সাইটে প্রতিদিন ২৪ ঘণ্টা অর্ডার করতে পারবেন। ধন্যবাদ।',
     whatsapp: '017XXXXXXXX',
@@ -139,7 +143,11 @@ export default function App() {
     nagadNumber: '017XXXXXXXX',
     rocketNumber: '017XXXXXXXX',
     upayNumber: '017XXXXXXXX',
-    sliderImages: ['https://picsum.photos/seed/stb1/1200/400', 'https://picsum.photos/seed/stb2/1200/400'],
+    sliderImages: [
+      { id: '1', url: 'https://picsum.photos/seed/stb1/1200/400', link: '' },
+      { id: '2', url: 'https://picsum.photos/seed/stb2/1200/400', link: '' }
+    ],
+    sliderInterval: 3000,
     bkashLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Bkash_logo.png/1200px-Bkash_logo.png',
     nagadLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Nagad_Logo.png/1200px-Nagad_Logo.png',
     rocketLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Rocket_Logo.png/1200px-Rocket_Logo.png',
@@ -190,6 +198,17 @@ export default function App() {
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
+
+  // Auto-slide effect
+  useEffect(() => {
+    if (siteSettings.sliderImages.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % siteSettings.sliderImages.length);
+    }, siteSettings.sliderInterval || 3000);
+
+    return () => clearInterval(interval);
+  }, [siteSettings.sliderImages.length, siteSettings.sliderInterval]);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [transactionFilter, setTransactionFilter] = useState<'All' | 'Completed' | 'Pending' | 'Cancelled'>('All');
   const [adminTab, setAdminTab] = useState<'orders' | 'games' | 'packages' | 'settings' | 'users' | 'ai'>('orders');
@@ -596,7 +615,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <BotProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Notice Bar */}
       <AnimatePresence>
         {siteSettings.notice && (
@@ -750,13 +770,36 @@ export default function App() {
           <div className="space-y-8">
             {/* Hero Slider */}
             <section className="relative h-48 md:h-80 rounded-3xl overflow-hidden shadow-lg group">
-              <div className="flex transition-transform duration-700 h-full">
+              <div className="relative w-full h-full">
                 {siteSettings.sliderImages.map((img, i) => (
-                  <img key={`slider-${i}`} src={img} className="w-full h-full object-cover flex-shrink-0" />
+                  <div 
+                    key={img.id || `slide-${i}`}
+                    className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                  >
+                    {typeof img.link === 'string' && img.link.trim() !== '' ? (
+                      <a href={img.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                        <img src={img.url} className="w-full h-full object-cover" alt={`Slide ${i + 1}`} />
+                      </a>
+                    ) : (
+                      <img src={img.url} className="w-full h-full object-cover" alt={`Slide ${i + 1}`} />
+                    )}
+                  </div>
                 ))}
               </div>
+              
+              {/* Slider Indicators */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                {siteSettings.sliderImages.map((img, i) => (
+                  <button 
+                    key={img.id || `indicator-${i}`}
+                    onClick={() => setCurrentSlide(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${i === currentSlide ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'}`}
+                  />
+                ))}
+              </div>
+
               {/* Simple Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-6">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-6 pointer-events-none z-10">
                  <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-bold border border-white/20">
                     Welcome to {siteSettings.siteName}
                  </div>
@@ -1960,36 +2003,36 @@ export default function App() {
         )}
 
         {view === 'transactions' && (
-          <div className="max-w-5xl mx-auto py-12 px-4 space-y-8">
+          <div className="max-w-5xl mx-auto py-6 md:py-12 px-4 space-y-6 md:space-y-8 pb-24">
             {/* Balance Card */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-6">
-                <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
-                  <Wallet className="w-8 h-8" />
+            <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8">
+              <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100 shrink-0">
+                  <Wallet className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Available Balance</div>
-                  <div className="text-4xl font-black text-indigo-950">৳{userProfile.balance}</div>
+                  <div className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Available Balance</div>
+                  <div className="text-3xl md:text-4xl font-black text-indigo-950">৳{userProfile.balance}</div>
                 </div>
               </div>
-              <button onClick={() => setView('add-money')} className="w-full md:w-auto bg-indigo-950 text-white px-10 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-105 transition-all flex items-center justify-center gap-3">
+              <button onClick={() => setView('add-money')} className="w-full md:w-auto bg-indigo-950 text-white px-6 md:px-10 py-4 md:py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-105 transition-all flex items-center justify-center gap-3 text-sm md:text-base">
                 <Plus className="w-5 h-5" /> ADD MONEY
               </button>
             </div>
 
             {/* Transactions List */}
-            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
+              <div className="p-6 md:p-8 border-b border-slate-50 flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
                 <div className="flex items-center gap-3">
-                  <History className="w-6 h-6 text-indigo-600" />
-                  <h3 className="text-xl font-black text-indigo-950">Transaction History</h3>
+                  <History className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+                  <h3 className="text-lg md:text-xl font-black text-indigo-950">Transaction History</h3>
                 </div>
-                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl">
+                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl overflow-x-auto no-scrollbar w-full md:w-auto">
                   {['All', 'Completed', 'Pending', 'Cancelled'].map(f => (
                     <button 
                       key={f} 
                       onClick={() => setTransactionFilter(f as any)}
-                      className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${transactionFilter === f ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-indigo-600'}`}
+                      className={`px-4 md:px-5 py-2 rounded-xl text-[10px] md:text-xs font-black transition-all whitespace-nowrap flex-1 md:flex-none ${transactionFilter === f ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-indigo-600'}`}
                     >
                       {f}
                     </button>
@@ -1999,38 +2042,38 @@ export default function App() {
 
               <div className="divide-y divide-slate-50">
                 {userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).length > 0 ? userOrders.filter(o => transactionFilter === 'All' || o.status === transactionFilter).map((o, i) => (
-                  <div key={`transaction-item-${o.id}-${i}`} className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center gap-6 w-full md:w-auto">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+                  <div key={`transaction-item-${o.id}-${i}`} className="p-4 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-start gap-4 w-full md:w-auto">
+                      <div className={`w-10 h-10 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shrink-0 mt-1 md:mt-0 ${
                         o.status === 'Completed' ? 'bg-green-50 text-green-600' :
                         o.status === 'Cancelled' ? 'bg-red-50 text-red-600' :
                         'bg-orange-50 text-orange-600'
                       }`}>
-                        {o.status === 'Completed' ? <CheckCircle className="w-7 h-7" /> : 
-                         o.status === 'Cancelled' ? <X className="w-7 h-7" /> : 
-                         <Clock className="w-7 h-7" />}
+                        {o.status === 'Completed' ? <CheckCircle className="w-5 h-5 md:w-7 md:h-7" /> : 
+                         o.status === 'Cancelled' ? <X className="w-5 h-5 md:w-7 md:h-7" /> : 
+                         <Clock className="w-5 h-5 md:w-7 md:h-7" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
                             o.status === 'Completed' ? 'bg-green-100 text-green-600' :
                             o.status === 'Cancelled' ? 'bg-red-100 text-red-600' :
                             'bg-orange-100 text-orange-600'
                           }`}>{o.status}</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order #{o.id}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{o.id}</span>
                         </div>
-                        <div className="font-black text-indigo-950 text-sm truncate">{o.packageName}</div>
-                        <div className="text-[10px] text-slate-400 font-bold flex items-center gap-2 mt-1">
-                          <Hash className="w-3 h-3" /> Trx: {o.transactionId || 'N/A'}
-                          <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                          <Clock className="w-3 h-3" /> {new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}
+                        <div className="font-black text-indigo-950 text-sm md:text-base truncate">{o.packageName}</div>
+                        <div className="text-[10px] text-slate-400 font-bold flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                          <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> {o.transactionId || 'N/A'}</span>
+                          <span className="hidden md:inline w-1 h-1 bg-slate-200 rounded-full"></span>
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(o.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between w-full md:w-auto gap-8">
-                      <div className="text-right">
-                        <div className="text-2xl font-black text-indigo-950">৳{packages.find(p => p.name === o.packageName)?.price || '0'}</div>
+                    <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-8 pl-14 md:pl-0">
+                      <div className="text-left md:text-right">
+                        <div className="text-lg md:text-2xl font-black text-indigo-950">৳{packages.find(p => p.name === o.packageName)?.price || '0'}</div>
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount Paid</div>
                       </div>
                       <div className="flex gap-2">
@@ -2087,43 +2130,52 @@ export default function App() {
         )}
 
         {view === 'admin' && isAdminLoggedIn && (
-          <div className="space-y-10 pb-20">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="space-y-6 md:space-y-10 pb-20">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 bg-white p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div>
-                <h2 className="text-3xl font-black text-indigo-950">Control Center</h2>
-                <p className="text-slate-400 font-bold text-sm">Manage your gaming empire from here</p>
+                <h2 className="text-2xl md:text-3xl font-black text-indigo-950">Control Center</h2>
+                <p className="text-slate-400 font-bold text-xs md:text-sm">Manage your gaming empire from here</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={seedInitialData} className="px-6 py-3 bg-slate-100 rounded-2xl text-xs font-black hover:bg-slate-200 transition-all">Seed Data</button>
-                <button onClick={() => setIsAdminLoggedIn(false)} className="px-6 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100 transition-all">Logout</button>
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                <button onClick={seedInitialData} className="flex-1 md:flex-none px-4 md:px-6 py-3 bg-slate-100 rounded-xl md:rounded-2xl text-xs font-black hover:bg-slate-200 transition-all text-center">Seed Data</button>
+                <button onClick={() => setIsAdminLoggedIn(false)} className="flex-1 md:flex-none px-4 md:px-6 py-3 bg-red-50 text-red-500 rounded-xl md:rounded-2xl text-xs font-black hover:bg-red-100 transition-all text-center">Logout</button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {[
                 { label: 'Total Orders', value: orders.length, icon: History, color: 'bg-blue-500' },
                 { label: 'Pending', value: orders.filter(o => o.status === 'Pending').length, icon: Clock, color: 'bg-orange-500' },
                 { label: 'Games', value: games.length, icon: Zap, color: 'bg-red-500' },
                 { label: 'Packages', value: packages.length, icon: Copy, color: 'bg-indigo-500' }
               ].map((stat) => (
-                <div key={stat.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-                  <div className={`${stat.color} p-4 rounded-2xl text-white shadow-lg`}>
-                    <stat.icon className="w-6 h-6" />
+                <div key={stat.label} className="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
+                  <div className={`${stat.color} p-3 md:p-4 rounded-xl md:rounded-2xl text-white shadow-lg`}>
+                    <stat.icon className="w-5 h-5 md:w-6 md:h-6" />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-indigo-950">{stat.value}</div>
+                    <div className="text-xl md:text-2xl font-black text-indigo-950">{stat.value}</div>
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="flex gap-2 p-2 bg-white rounded-3xl border border-slate-100 shadow-sm w-full md:w-fit mx-auto overflow-x-auto no-scrollbar">
-              {['orders', 'games', 'packages', 'settings', 'users', 'ai'].map(t => (
-                <button key={t} onClick={() => setAdminTab(t as any)} className={`px-6 md:px-8 py-3 rounded-2xl font-black text-xs uppercase whitespace-nowrap transition-all ${adminTab === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-400 hover:text-indigo-600'}`}>
-                  {t === 'ai' ? 'AI Assistant' : t}
-                </button>
-              ))}
+            {/* Navigation Tabs */}
+            <div className="sticky top-20 z-30 -mx-4 px-4 md:mx-0 md:px-0">
+              <div className="flex gap-2 p-2 bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm w-full md:w-fit mx-auto overflow-x-auto no-scrollbar snap-x">
+                {['orders', 'games', 'packages', 'settings', 'users', 'ai'].map(t => (
+                  <button 
+                    key={t} 
+                    onClick={() => setAdminTab(t as any)} 
+                    className={`snap-center px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase whitespace-nowrap transition-all ${adminTab === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-400 hover:text-indigo-600'}`}
+                  >
+                    {t === 'ai' ? 'AI Assistant' : t}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {adminTab === 'orders' && (
@@ -2314,7 +2366,7 @@ export default function App() {
                   <h3 className="text-2xl font-black text-indigo-950">Package Management</h3>
                   <button onClick={() => setEditPkg({})} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-100 hover:scale-105 transition-all"><Plus className="w-5 h-5" /> Create Package</button>
                 </div>
-                <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400">
                       <tr><th className="p-8">Game</th><th className="p-8">Package Details</th><th className="p-8">Price</th><th className="p-8 text-right">Actions</th></tr>
@@ -2356,6 +2408,26 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile Cards for Packages */}
+                <div className="md:hidden p-4 space-y-4">
+                  {packages.map((p, i) => (
+                    <div key={`pkg-mobile-${p.id}-${i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img src={games.find(g => g.id === p.gameId)?.image} className="w-12 h-12 rounded-xl object-cover" />
+                        <div>
+                          <div className="font-black text-indigo-950 text-sm">{p.amount} {p.name}</div>
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">{games.find(g => g.id === p.gameId)?.name}</div>
+                          <div className="text-red-500 font-black mt-1">৳{p.price}</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button onClick={() => setEditPkg(p)} className="bg-white p-2 rounded-lg text-indigo-600 shadow-sm border border-slate-100"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="bg-white p-2 rounded-lg text-red-400 shadow-sm border border-slate-100"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -2378,6 +2450,74 @@ export default function App() {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notice Bar Content</label>
                     <textarea value={siteSettings.notice} onChange={e => setSiteSettings({...siteSettings, notice: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" rows={3} />
                   </div>
+
+                  {/* Slider Management Section */}
+                  <div className="col-span-1 md:col-span-2 space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-lg font-black text-indigo-950">Slider Images</h4>
+                      <button 
+                        onClick={() => setSiteSettings({
+                          ...siteSettings, 
+                          sliderImages: [...siteSettings.sliderImages, { id: Date.now().toString(), url: '', link: '' }]
+                        })}
+                        className="text-xs font-black bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-all"
+                      >
+                        Add Slide
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Auto-Change Interval (Seconds)</label>
+                       <input 
+                         type="number" 
+                         value={siteSettings.sliderInterval ? siteSettings.sliderInterval / 1000 : 3} 
+                         onChange={e => setSiteSettings({...siteSettings, sliderInterval: Number(e.target.value) * 1000})} 
+                         className="w-full md:w-1/3 border-2 border-slate-200 p-3 rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" 
+                       />
+                    </div>
+
+                    <div className="space-y-4">
+                      {siteSettings.sliderImages.map((slide, index) => (
+                        <div key={slide.id} className="flex flex-col md:flex-row gap-4 items-start bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                          <div className="flex-1 w-full space-y-2">
+                            <input 
+                              placeholder="Image URL" 
+                              value={slide.url} 
+                              onChange={e => {
+                                const newSlides = [...siteSettings.sliderImages];
+                                newSlides[index].url = e.target.value;
+                                setSiteSettings({...siteSettings, sliderImages: newSlides});
+                              }} 
+                              className="w-full border-2 border-slate-100 p-3 rounded-xl text-xs font-bold focus:border-indigo-600 outline-none" 
+                            />
+                            <input 
+                              placeholder="Link URL (Optional)" 
+                              value={slide.link || ''} 
+                              onChange={e => {
+                                const newSlides = [...siteSettings.sliderImages];
+                                newSlides[index].link = e.target.value;
+                                setSiteSettings({...siteSettings, sliderImages: newSlides});
+                              }} 
+                              className="w-full border-2 border-slate-100 p-3 rounded-xl text-xs font-bold focus:border-indigo-600 outline-none" 
+                            />
+                          </div>
+                          <div className="w-full md:w-32 h-20 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
+                            {slide.url && <img src={slide.url} className="w-full h-full object-cover" alt="Preview" />}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newSlides = siteSettings.sliderImages.filter((_, i) => i !== index);
+                              setSiteSettings({...siteSettings, sliderImages: newSlides});
+                            }}
+                            className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all self-center"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">WhatsApp</label>
@@ -2487,7 +2627,7 @@ export default function App() {
                   <h3 className="text-xl font-black text-indigo-950">User Directory</h3>
                   <div className="text-xs font-bold text-slate-400 uppercase">Total Users: {allUsers.length}</div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400">
                       <tr><th className="p-8">User Profile</th><th className="p-8">User ID</th><th className="p-8">Wallet Balance</th><th className="p-8">Activity</th><th className="p-8 text-right">Actions</th></tr>
@@ -2551,6 +2691,48 @@ export default function App() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Cards for Users */}
+                <div className="md:hidden p-4 space-y-4">
+                  {allUsers.map((u, i) => (
+                    <div key={`user-mobile-${u.id}-${i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-indigo-100 flex-shrink-0">
+                          <img src={`https://ui-avatars.com/api/?name=${u.name || 'User'}&background=6366f1&color=fff`} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-black text-indigo-950 text-sm truncate">{u.name || 'User'}</div>
+                          <div className="text-[10px] text-slate-400 font-bold truncate">{u.email || 'No Email'}</div>
+                          <div className="font-mono text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded w-fit mt-1">ID: {u.supportPin || 'N/A'}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Balance</div>
+                          <div className="font-black text-green-600">৳{u.balance || 0}</div>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Spent</div>
+                          <div className="font-black text-indigo-950">৳{u.totalSpent || 0}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        <button onClick={() => {
+                          const newBalance = prompt('Enter new balance:', u.balance);
+                          if (newBalance !== null) {
+                            update(ref(db, `users/${u.id}`), { balance: Number(newBalance) });
+                          }
+                        }} className="flex-1 bg-indigo-100 text-indigo-700 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap">Edit Balance</button>
+                        <button onClick={() => {
+                          setAdminTab('orders');
+                          setOrderSearch(u.id);
+                        }} className="flex-1 bg-red-100 text-red-700 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap">View Orders</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div className="p-8 bg-slate-50/50 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">End of User Directory</div>
               </div>
@@ -3099,6 +3281,7 @@ export default function App() {
         )}
       </Modal>
       
+      {isAdminLoggedIn && <BotWidget />}
       <AIChatbot 
         isAdmin={isAdminLoggedIn} 
         orders={orders} 
@@ -3121,5 +3304,6 @@ export default function App() {
       <BottomNav view={view} setView={setView} setIsSidebarOpen={setIsSidebarOpen} />
       <div className="md:hidden h-20"></div>
     </div>
+    </BotProvider>
   );
 }
