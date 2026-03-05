@@ -27,6 +27,8 @@ import {
   AlertCircle,
   CreditCard,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   Wallet,
   Search,
   Sparkles,
@@ -85,6 +87,7 @@ interface Package {
   inStock?: boolean; 
   stock?: number;
   category?: string;
+  sortOrder?: number;
 }
 interface Order { 
   id: string; userId: string; userEmail: string; uid: string; accountType: string; 
@@ -604,8 +607,52 @@ export default function App() {
       alert("Please enter a valid price");
       return;
     }
-    await set(ref(db, `packages/${id}`), { ...editPkg, price });
+    
+    // If new package, set sortOrder to end of list
+    let sortOrder = editPkg?.sortOrder;
+    if (sortOrder === undefined) {
+      const gamePkgs = packages.filter(p => p.gameId === editPkg?.gameId);
+      sortOrder = gamePkgs.length;
+    }
+
+    await set(ref(db, `packages/${id}`), { ...editPkg, price, sortOrder });
     setEditPkg(null);
+  };
+
+  const movePackage = async (pkgId: string, direction: 'up' | 'down') => {
+    const pkg = packages.find(p => p.id === pkgId);
+    if (!pkg) return;
+
+    const gamePackages = packages
+      .filter(p => p.gameId === pkg.gameId)
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+    const currentIndex = gamePackages.findIndex(p => p.id === pkgId);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    if (targetIndex < 0 || targetIndex >= gamePackages.length) return;
+
+    const targetPkg = gamePackages[targetIndex];
+    
+    // Swap sortOrder
+    const currentOrder = pkg.sortOrder || 0;
+    const targetOrder = targetPkg.sortOrder || 0;
+
+    // If they are equal (e.g. both 0), we need to re-assign all orders in this group
+    if (currentOrder === targetOrder) {
+      const updates: any = {};
+      gamePackages.forEach((p, i) => {
+        let newOrder = i;
+        if (i === currentIndex) newOrder = targetIndex;
+        else if (i === targetIndex) newOrder = currentIndex;
+        else newOrder = i;
+        updates[`packages/${p.id}/sortOrder`] = newOrder;
+      });
+      await update(ref(db), updates);
+    } else {
+      await update(ref(db, `packages/${pkg.id}`), { sortOrder: targetOrder });
+      await update(ref(db, `packages/${targetPkg.id}`), { sortOrder: currentOrder });
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -1203,7 +1250,10 @@ export default function App() {
                 {packages.length === 0 ? (
                   Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
                 ) : (
-                  packages.filter(p => p.gameId === selectedGame.id).map((p, i) => (
+                  packages
+                    .filter(p => p.gameId === selectedGame.id)
+                    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                    .map((p, i) => (
                     <div 
                       key={`package-item-${p.id}-${i}`} 
                       onClick={() => {
@@ -2483,67 +2533,104 @@ export default function App() {
                   <h3 className="text-2xl font-black text-indigo-950">Package Management</h3>
                   <button onClick={() => setEditPkg({})} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-100 hover:scale-105 transition-all"><Plus className="w-5 h-5" /> Create Package</button>
                 </div>
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400">
-                      <tr><th className="p-8">Game</th><th className="p-8">Package Details</th><th className="p-8">Price</th><th className="p-8 text-right">Actions</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {packages.length === 0 ? (
-                        Array(6).fill(0).map((_, i) => (
-                          <tr key={i}>
-                            <td className="p-8"><Skeleton className="h-10 w-32" /></td>
-                            <td className="p-8"><Skeleton className="h-6 w-24" /></td>
-                            <td className="p-8"><Skeleton className="h-8 w-16" /></td>
-                            <td className="p-8"><Skeleton className="h-8 w-20 ml-auto" /></td>
-                          </tr>
-                        ))
-                      ) : (
-                        packages.map((p, i) => (
-                          <tr key={`admin-package-${p.id}-${i}`} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-8">
-                              <div className="flex items-center gap-4">
-                                <img src={games.find(g => g.id === p.gameId)?.image} className="w-10 h-10 rounded-xl object-cover" />
-                                <div className="font-black text-indigo-950 text-sm">{games.find(g => g.id === p.gameId)?.name}</div>
-                              </div>
-                            </td>
-                            <td className="p-8">
-                              <div className="text-sm font-bold text-indigo-950">{p.amount} {p.name}</div>
-                            </td>
-                            <td className="p-8">
-                              <div className="text-lg font-black text-red-500">৳{p.price}</div>
-                            </td>
-                            <td className="p-8 text-right">
-                              <div className="flex justify-end gap-2">
-                                <button onClick={() => setEditPkg(p)} className="text-indigo-600 p-3 hover:bg-indigo-50 rounded-xl transition-all"><Edit className="w-5 h-5" /></button>
-                                <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="text-red-400 p-3 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-5 h-5" /></button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
 
-                {/* Mobile Cards for Packages */}
-                <div className="md:hidden p-4 space-y-4">
-                  {packages.map((p, i) => (
-                    <div key={`pkg-mobile-${p.id}-${i}`} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img src={games.find(g => g.id === p.gameId)?.image} className="w-12 h-12 rounded-xl object-cover" />
-                        <div>
-                          <div className="font-black text-indigo-950 text-sm">{p.amount} {p.name}</div>
-                          <div className="text-[10px] text-slate-400 font-bold uppercase">{games.find(g => g.id === p.gameId)?.name}</div>
-                          <div className="text-red-500 font-black mt-1">৳{p.price}</div>
+                <div className="grid grid-cols-1 gap-8">
+                  {games.map(game => {
+                    const gamePackages = packages
+                      .filter(p => p.gameId === game.id)
+                      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                    
+                    if (gamePackages.length === 0) return null;
+
+                    return (
+                      <div key={`game-section-${game.id}`} className="bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
+                        <div className="flex items-center gap-4 border-b border-slate-50 pb-6">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
+                            <img src={game.image} className="w-full h-full object-cover" alt={game.name} />
+                          </div>
+                          <div>
+                            <h4 className="text-2xl font-black text-indigo-950">{game.name}</h4>
+                            <p className="text-slate-400 font-bold text-sm">{gamePackages.length} Packages Available</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {gamePackages.map((p, index) => (
+                            <div key={`game-pkg-${p.id}-${index}`} className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:border-indigo-200 transition-all group">
+                              <div className="flex items-center gap-6">
+                                <div className="flex flex-col gap-1">
+                                  <button 
+                                    disabled={index === 0}
+                                    onClick={() => movePackage(p.id, 'up')}
+                                    className={`p-2 rounded-lg transition-all ${index === 0 ? 'text-slate-200' : 'text-indigo-600 hover:bg-indigo-100'}`}
+                                  >
+                                    <ArrowUp className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    disabled={index === gamePackages.length - 1}
+                                    onClick={() => movePackage(p.id, 'down')}
+                                    className={`p-2 rounded-lg transition-all ${index === gamePackages.length - 1 ? 'text-slate-200' : 'text-indigo-600 hover:bg-indigo-100'}`}
+                                  >
+                                    <ArrowDown className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                <div>
+                                  <div className="text-lg font-black text-indigo-950">{p.amount} {p.name}</div>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <span className="text-xl font-black text-red-500">৳{p.price}</span>
+                                    {p.bonus && <span className="text-[10px] font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg uppercase">+{p.bonus} Bonus</span>}
+                                    {!p.inStock && <span className="text-[10px] font-black bg-slate-200 text-slate-500 px-2 py-1 rounded-lg uppercase">Out of Stock</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-3 mt-4 md:mt-0">
+                                <button onClick={() => setEditPkg(p)} className="flex-1 md:flex-none bg-white text-indigo-600 px-6 py-3 rounded-xl font-black text-sm border border-slate-200 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+                                  <Edit className="w-4 h-4" /> Edit
+                                </button>
+                                <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="p-3 text-red-400 hover:bg-red-50 rounded-xl transition-all">
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <button onClick={() => setEditPkg(p)} className="bg-white p-2 rounded-lg text-indigo-600 shadow-sm border border-slate-100"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="bg-white p-2 rounded-lg text-red-400 shadow-sm border border-slate-100"><Trash2 className="w-4 h-4" /></button>
+                    );
+                  })}
+
+                  {/* Handle packages with no game or missing game */}
+                  {(() => {
+                    const orphanedPackages = packages.filter(p => !games.find(g => g.id === p.gameId));
+                    if (orphanedPackages.length === 0) return null;
+                    return (
+                      <div key="orphaned-packages-container" className="bg-red-50 p-10 rounded-[2.5rem] border border-red-100 shadow-xl space-y-6">
+                        <div className="flex items-center gap-4 border-b border-red-100 pb-6">
+                          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center">
+                            <AlertCircle className="w-8 h-8 text-red-500" />
+                          </div>
+                          <div>
+                            <h4 className="text-2xl font-black text-red-950">Orphaned Packages</h4>
+                            <p className="text-red-400 font-bold text-sm">These packages are not linked to any game</p>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          {orphanedPackages.map((p, index) => (
+                            <div key={`orphaned-pkg-${p.id}-${index}`} className="flex items-center justify-between p-6 bg-white rounded-3xl border border-red-100">
+                              <div>
+                                <div className="text-lg font-black text-red-950">{p.amount} {p.name}</div>
+                                <div className="text-red-500 font-black">৳{p.price}</div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={() => setEditPkg(p)} className="p-3 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"><Edit className="w-5 h-5" /></button>
+                                <button onClick={() => remove(ref(db, `packages/${p.id}`))} className="p-3 text-red-400 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-5 h-5" /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })()}
                 </div>
               </div>
             )}
