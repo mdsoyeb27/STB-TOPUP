@@ -126,6 +126,15 @@ interface SiteSettings {
   developerImage?: string;
   developerDescription?: string;
   developerLink?: string;
+  footerDescription?: string;
+  topupCenterLink?: string;
+  privacyPolicyLink?: string;
+  termsOfServiceLink?: string;
+  contactSupportLink?: string;
+  supportWhatsApp?: string;
+  supportTelegram?: string;
+  telegramJoinLink?: string;
+  appDownloadLink?: string;
 }
 
 interface UserProfile {
@@ -178,6 +187,15 @@ export default function App() {
     developerImage: 'https://ui-avatars.com/api/?name=Dev&background=000&color=fff',
     developerDescription: 'Full Stack Developer & UI/UX Designer',
     developerLink: '#',
+    footerDescription: 'The most trusted gaming top-up platform in Bangladesh. Fast, secure, and reliable service for all your favorite games.',
+    topupCenterLink: '#',
+    privacyPolicyLink: '#',
+    termsOfServiceLink: '#',
+    contactSupportLink: '#',
+    supportWhatsApp: '017XXXXXXXX',
+    supportTelegram: 'stbtopup',
+    telegramJoinLink: 'https://t.me/stbtopup',
+    appDownloadLink: '#',
     loyaltyRules: `
 🚩 Premium User Loyalty Discount
 যেসব গ্রাহক আমাদের কাছ থেকে মোট ১০,০০০ বা তার বেশি মূল্যের পণ্য ক্রয় করেছেন, তারা Premium User Loyalty Discount অফারটি পাওয়ার যোগ্য হবেন। নির্ধারিত পরিমাণ টাকার টপ-আপ সম্পন্ন হলে, আপনি পরবর্তী টপ-আপে অতিরিক্ত ডিসকাউন্ট উপভোগ করতে পারবেন।
@@ -203,7 +221,7 @@ export default function App() {
     supportPin: '666994'
   });
   
-  const [view, setView] = useState<'home' | 'game' | 'profile' | 'edit-profile' | 'admin' | 'add-money' | 'transactions' | 'payment-cancelled' | 'privacy' | 'gateway' | 'gateway-payment' | 'support'>('home');
+  const [view, setView] = useState<'home' | 'game' | 'profile' | 'edit-profile' | 'admin' | 'add-money' | 'transactions' | 'payment-cancelled' | 'privacy' | 'terms' | 'cookies' | 'developer' | 'gateway' | 'gateway-payment' | 'support'>('home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
@@ -795,10 +813,13 @@ export default function App() {
                 <button onClick={() => { setView('privacy'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
                   <ShieldCheck className="w-5 h-5 text-indigo-600" /> Privacy Policy
                 </button>
+                <button onClick={() => { setView('terms'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
+                  <ShieldCheck className="w-5 h-5 text-indigo-600" /> Terms of Service
+                </button>
                 <button onClick={() => { setView('developer'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
                   <Code className="w-5 h-5 text-indigo-600" /> Developer
                 </button>
-                <button onClick={() => { window.open(`https://wa.me/${siteSettings.whatsapp}`); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
+                <button onClick={() => { setView('support'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
                   <MessageCircle className="w-5 h-5 text-indigo-600" /> Contact Us
                 </button>
                 <button onClick={() => { alert("To install the app:\n1. Tap the Share button in your browser.\n2. Select 'Add to Home Screen'."); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 text-indigo-950 font-bold transition-colors">
@@ -935,7 +956,7 @@ export default function App() {
 
             {/* Banners - Moved to Home Screen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-blue-500 rounded-xl p-4 flex items-center justify-between text-white shadow-lg shadow-blue-200 cursor-pointer hover:bg-blue-600 transition-colors" onClick={() => window.open(`https://t.me/${siteSettings.telegram}`)}>
+              <div className="bg-blue-500 rounded-xl p-4 flex items-center justify-between text-white shadow-lg shadow-blue-200 cursor-pointer hover:bg-blue-600 transition-colors" onClick={() => window.open(siteSettings.telegramJoinLink || `https://t.me/${siteSettings.telegram}`)}>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                     <Send className="w-5 h-5 -rotate-45 translate-x-0.5 translate-y-0.5" />
@@ -950,7 +971,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-green-500 rounded-xl p-4 flex items-center justify-between text-white shadow-lg shadow-green-200 cursor-pointer hover:bg-green-600 transition-colors" onClick={() => alert("App coming soon!")}>
+              <div className="bg-green-500 rounded-xl p-4 flex items-center justify-between text-white shadow-lg shadow-green-200 cursor-pointer hover:bg-green-600 transition-colors" onClick={() => siteSettings.appDownloadLink && siteSettings.appDownloadLink !== '#' ? window.open(siteSettings.appDownloadLink) : alert("App coming soon!")}>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                     <Download className="w-5 h-5" />
@@ -2296,6 +2317,46 @@ export default function App() {
           </div>
         )}
 
+        {view === 'terms' && (
+          <div className="max-w-4xl mx-auto space-y-8 py-12">
+            <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100">
+              <h1 className="text-4xl font-black text-indigo-950 mb-8">Terms of Service</h1>
+              <div className="prose prose-slate max-w-none space-y-6 text-slate-600 font-medium">
+                <p>By using STB TOPUP, you agree to the following terms and conditions.</p>
+                <h3 className="text-xl font-black text-indigo-950">1. Acceptance of Terms</h3>
+                <p>By accessing and using this website, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                <h3 className="text-xl font-black text-indigo-950">2. Provision of Services</h3>
+                <p>STB TOPUP provides digital goods and top-up services. We reserve the right to modify or discontinue any service at any time without notice.</p>
+                <h3 className="text-xl font-black text-indigo-950">3. User Accounts</h3>
+                <p>You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.</p>
+                <h3 className="text-xl font-black text-indigo-950">4. Payments and Refunds</h3>
+                <p>All payments are processed securely. Due to the nature of digital goods, all sales are final and non-refundable unless otherwise specified.</p>
+                <h3 className="text-xl font-black text-indigo-950">5. Limitation of Liability</h3>
+                <p>STB TOPUP shall not be liable for any direct, indirect, incidental, or consequential damages resulting from the use or inability to use our services.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'cookies' && (
+          <div className="max-w-4xl mx-auto space-y-8 py-12">
+            <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100">
+              <h1 className="text-4xl font-black text-indigo-950 mb-8">Cookies Policy</h1>
+              <div className="prose prose-slate max-w-none space-y-6 text-slate-600 font-medium">
+                <p>This policy explains how STB TOPUP uses cookies and similar technologies.</p>
+                <h3 className="text-xl font-black text-indigo-950">1. What are Cookies?</h3>
+                <p>Cookies are small text files that are stored on your device when you visit a website. They help us recognize your device and remember your preferences.</p>
+                <h3 className="text-xl font-black text-indigo-950">2. How We Use Cookies</h3>
+                <p>We use cookies to enhance your browsing experience, analyze site traffic, and personalize content. This includes session cookies and persistent cookies.</p>
+                <h3 className="text-xl font-black text-indigo-950">3. Managing Cookies</h3>
+                <p>You can control and manage cookies through your browser settings. However, disabling cookies may affect the functionality of our website.</p>
+                <h3 className="text-xl font-black text-indigo-950">4. Third-Party Cookies</h3>
+                <p>We may also use third-party cookies from services like Google Analytics to help us understand how users interact with our site.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {view === 'admin' && isAdminLoggedIn && (
           <div className="space-y-6 md:space-y-10 pb-20">
             {/* Header Section */}
@@ -2860,6 +2921,48 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+
+                    <div className="col-span-1 md:col-span-2 space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-100 mt-4">
+                      <h4 className="text-lg font-black text-indigo-950">Footer Customization</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Footer Description</label>
+                          <textarea value={siteSettings.footerDescription || ''} onChange={e => setSiteSettings({...siteSettings, footerDescription: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" rows={3} />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Topup Center Link</label>
+                          <input value={siteSettings.topupCenterLink || ''} onChange={e => setSiteSettings({...siteSettings, topupCenterLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Privacy Policy Link</label>
+                          <input value={siteSettings.privacyPolicyLink || ''} onChange={e => setSiteSettings({...siteSettings, privacyPolicyLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Terms of Service Link</label>
+                          <input value={siteSettings.termsOfServiceLink || ''} onChange={e => setSiteSettings({...siteSettings, termsOfServiceLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Contact Support Link</label>
+                          <input value={siteSettings.contactSupportLink || ''} onChange={e => setSiteSettings({...siteSettings, contactSupportLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Support WhatsApp Number</label>
+                          <input value={siteSettings.supportWhatsApp || ''} onChange={e => setSiteSettings({...siteSettings, supportWhatsApp: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Support Telegram Username</label>
+                          <input value={siteSettings.supportTelegram || ''} onChange={e => setSiteSettings({...siteSettings, supportTelegram: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Join Telegram Link</label>
+                          <input value={siteSettings.telegramJoinLink || ''} onChange={e => setSiteSettings({...siteSettings, telegramJoinLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Download App Link</label>
+                          <input value={siteSettings.appDownloadLink || ''} onChange={e => setSiteSettings({...siteSettings, appDownloadLink: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => set(ref(db, 'settings'), siteSettings)} className="bg-indigo-600 text-white px-12 py-5 rounded-2xl font-black shadow-2xl shadow-indigo-100 hover:scale-[1.02] transition-all">Update Platform Settings</button>
@@ -3155,10 +3258,10 @@ export default function App() {
               </div>
               <span className="text-2xl font-black">{siteSettings.siteName}</span>
             </div>
-            <p className="text-slate-400 font-bold text-sm leading-relaxed">The most trusted gaming top-up platform in Bangladesh. Fast, secure, and reliable service for all your favorite games.</p>
+            <p className="text-slate-400 font-bold text-sm leading-relaxed">{siteSettings.footerDescription || 'The most trusted gaming top-up platform in Bangladesh. Fast, secure, and reliable service for all your favorite games.'}</p>
             <div className="flex gap-4">
-              <button className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-red-500 transition-all"><Globe className="w-5 h-5" /></button>
-              <button className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-red-500 transition-all"><MessageCircle className="w-5 h-5" /></button>
+              <button onClick={() => window.open(siteSettings.topupCenterLink || '#')} className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-red-500 transition-all"><Globe className="w-5 h-5" /></button>
+              <button onClick={() => window.open(`https://wa.me/${siteSettings.supportWhatsApp || siteSettings.whatsapp}`)} className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-red-500 transition-all"><MessageCircle className="w-5 h-5" /></button>
             </div>
           </div>
           
@@ -3167,8 +3270,8 @@ export default function App() {
             <ul className="space-y-4 text-slate-400 font-bold text-sm">
               <li><button onClick={() => setView('home')} className="hover:text-red-500 transition-colors">Topup Center</button></li>
               <li><button onClick={() => setView('privacy')} className="hover:text-red-500 transition-colors">Privacy Policy</button></li>
-              <li><button onClick={() => setView('privacy')} className="hover:text-red-500 transition-colors">Terms of Service</button></li>
-              <li><button onClick={() => window.open(`https://wa.me/${siteSettings.whatsapp}`)} className="hover:text-red-500 transition-colors">Contact Support</button></li>
+              <li><button onClick={() => setView('terms')} className="hover:text-red-500 transition-colors">Terms of Service</button></li>
+              <li><button onClick={() => setView('support')} className="hover:text-red-500 transition-colors">Contact Support</button></li>
             </ul>
           </div>
 
@@ -3179,14 +3282,14 @@ export default function App() {
                 <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center"><MessageCircle className="w-5 h-5" /></div>
                 <div>
                   <div className="text-xs font-black text-slate-400 uppercase">WhatsApp</div>
-                  <div className="text-sm font-black">{siteSettings.whatsapp}</div>
+                  <div className="text-sm font-black">{siteSettings.supportWhatsApp || siteSettings.whatsapp}</div>
                 </div>
               </div>
               <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
                 <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center"><Globe className="w-5 h-5" /></div>
                 <div>
                   <div className="text-xs font-black text-slate-400 uppercase">Telegram</div>
-                  <div className="text-sm font-black">@{siteSettings.telegram}</div>
+                  <div className="text-sm font-black">@{siteSettings.supportTelegram || siteSettings.telegram}</div>
                 </div>
               </div>
             </div>
@@ -3194,7 +3297,7 @@ export default function App() {
 
           <div>
             <h4 className="text-lg font-black mb-6">Download App</h4>
-            <button className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center gap-4 hover:bg-white/10 transition-all group">
+            <button onClick={() => siteSettings.appDownloadLink && window.open(siteSettings.appDownloadLink)} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center gap-4 hover:bg-white/10 transition-all group">
               <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-all"><Globe className="w-6 h-6" /></div>
               <div className="text-left">
                 <div className="text-[10px] font-black text-slate-400 uppercase">Get it on</div>
@@ -3210,8 +3313,8 @@ export default function App() {
           </div>
           <div className="flex gap-8 text-slate-500 font-bold text-sm">
             <button onClick={() => setView('privacy')} className="hover:text-white transition-colors">Privacy</button>
-            <button onClick={() => setView('privacy')} className="hover:text-white transition-colors">Terms</button>
-            <button onClick={() => setView('privacy')} className="hover:text-white transition-colors">Cookies</button>
+            <button onClick={() => setView('terms')} className="hover:text-white transition-colors">Terms</button>
+            <button onClick={() => setView('cookies')} className="hover:text-white transition-colors">Cookies</button>
           </div>
         </div>
       </footer>
