@@ -765,7 +765,6 @@ export default function App() {
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <>
             <motion.div 
               key="sidebar-backdrop"
               initial={{ opacity: 0 }} 
@@ -774,6 +773,8 @@ export default function App() {
               onClick={() => setIsSidebarOpen(false)} 
               className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm" 
             />
+        )}
+        {isSidebarOpen && (
             <motion.div 
               key="sidebar-content"
               initial={{ x: '-100%' }} 
@@ -833,7 +834,6 @@ export default function App() {
                 </button>
               </div>
             </motion.div>
-          </>
         )}
       </AnimatePresence>
 
@@ -868,7 +868,7 @@ export default function App() {
               <div className="relative w-full aspect-[21/9]">
                 {siteSettings.sliderImages.map((img, i) => (
                   <div 
-                    key={img.id || `slide-${i}`}
+                    key={`slide-${img.id}-${i}`}
                     className={`absolute inset-0 transition-opacity duration-500 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   >
                     {typeof img.link === 'string' && img.link.trim() !== '' ? (
@@ -886,7 +886,7 @@ export default function App() {
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
                 {siteSettings.sliderImages.map((img, i) => (
                   <button 
-                    key={img.id || `indicator-${i}`}
+                    key={`indicator-${img.id}-${i}`}
                     onClick={() => setCurrentSlide(i)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-white' : 'w-4 bg-white/50 hover:bg-white/80'}`}
                   />
@@ -919,7 +919,7 @@ export default function App() {
               if (categoryGames.length === 0) return null;
               
               return (
-                <div key={cat || `uncategorized-${i}`} className="space-y-4">
+                <div key={`category-${cat}-${i}`} className="space-y-4">
                   <div className="flex items-center gap-4">
                     <div className="h-1 flex-1 bg-slate-100 rounded-full"></div>
                     <h2 className="text-lg font-black text-center text-slate-800 uppercase tracking-wider">{cat}</h2>
@@ -1540,22 +1540,12 @@ export default function App() {
 
         {(view === 'gateway' || view === 'gateway-payment') && selectedPackage && (
           <div className="min-h-screen bg-slate-50 pb-24">
-            {/* Gateway Header */}
-            <div className="bg-white p-4 shadow-sm flex items-center justify-between sticky top-0 z-40">
-               <div className="flex items-center gap-2">
-                 <button onClick={() => view === 'gateway-payment' ? setView('gateway') : setView('game')}><ArrowRight className="w-5 h-5 rotate-180 text-slate-600" /></button>
-                 <span className="font-bold text-slate-700">pay.youtopup.com</span>
-               </div>
-               <div className="flex gap-4">
-                 <Plus className="w-5 h-5 text-slate-600" />
-                 <div className="w-6 h-6 border-2 border-slate-600 rounded-md flex items-center justify-center text-xs font-bold">68</div>
-               </div>
-            </div>
-
+            {/* Gateway Header - Removed as per request */}
+            
             <div className="max-w-md mx-auto p-4 space-y-6">
               {/* Logo Section */}
               <div className="flex flex-col items-center gap-2 py-4">
-                <div className="w-20 h-20 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-blue-50 p-2 overflow-hidden">
+                <div className="w-20 h-20 bg-white rounded-[2rem] shadow-lg flex items-center justify-center border-4 border-blue-50 p-2 overflow-hidden">
                    <img src={siteSettings.siteLogo} className="w-full h-full object-contain" />
                 </div>
                 <h2 className="text-xl font-bold text-slate-700">{siteSettings.siteName}</h2>
@@ -2759,7 +2749,7 @@ export default function App() {
 
                     <div className="space-y-4">
                       {siteSettings.sliderImages.map((slide, index) => (
-                        <div key={slide.id} className="flex flex-col md:flex-row gap-4 items-start bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div key={`admin-slide-${slide.id}-${index}`} className="flex flex-col md:flex-row gap-4 items-start bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                           <div className="flex-1 w-full space-y-2">
                             <input 
                               placeholder="Image URL" 
@@ -2843,6 +2833,14 @@ export default function App() {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Rocket Logo URL</label>
                       <input value={siteSettings.rocketLogo} onChange={e => setSiteSettings({...siteSettings, rocketLogo: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Upay Number</label>
+                      <input value={siteSettings.upayNumber} onChange={e => setSiteSettings({...siteSettings, upayNumber: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Upay Logo URL</label>
+                      <input value={siteSettings.upayLogo} onChange={e => setSiteSettings({...siteSettings, upayLogo: e.target.value})} className="w-full border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold focus:border-indigo-600 outline-none transition-all" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
