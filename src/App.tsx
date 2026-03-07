@@ -305,6 +305,7 @@ export default function App() {
   // Profile Edit States
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editPhotoURL, setEditPhotoURL] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -409,7 +410,18 @@ export default function App() {
       setUserOrders(orders.filter(o => o.userId === user.uid));
       onValue(ref(db, `users/${user.uid}`), (s) => {
         const d = s.val();
-        if (d) setUserProfile(d);
+        if (d) {
+          // Fix: Ensure supportPin exists
+          if (!d.supportPin) {
+            const newPin = Math.floor(100000 + Math.random() * 900000).toString();
+            update(ref(db, `users/${user.uid}`), { supportPin: newPin });
+            d.supportPin = newPin;
+          }
+          setUserProfile(d);
+          setEditName(d.name || '');
+          setEditPhone(d.phone || '');
+          setEditPhotoURL(d.photoURL || '');
+        }
       });
     }
   }, [user, orders]);
@@ -546,7 +558,7 @@ export default function App() {
       // Determine Payment Details
       const finalPaymentMethod = paymentType === 'wallet' ? 'Wallet' : paymentMethod;
       const finalTrxId = paymentType === 'wallet' ? `WAL-${Date.now()}` : trxId;
-      const finalPhone = paymentType === 'wallet' ? (userProfile.phone || user.phoneNumber || 'N/A') : phoneNumber;
+      const finalPhone = userProfile.phone || phoneNumber || user.phoneNumber || 'N/A';
 
       await set(ref(db, `orders/${orderId}`), {
         id: orderId,
@@ -1702,7 +1714,7 @@ export default function App() {
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-red-500 p-1">
-                  <img src={`https://ui-avatars.com/api/?name=${user.email}&background=6366f1&color=fff`} className="w-full h-full rounded-full object-cover" />
+                  <img src={userProfile.photoURL || `https://ui-avatars.com/api/?name=${user.email}&background=6366f1&color=fff`} className="w-full h-full rounded-full object-cover" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 bg-green-500 text-white p-1 rounded-full border-2 border-white">
                   <ShieldCheck className="w-4 h-4" />
@@ -1787,6 +1799,10 @@ export default function App() {
                     <label className="text-xs font-black text-slate-500 uppercase">Phone Number</label>
                     <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Enter phone number" className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase">Profile Image URL</label>
+                    <input type="text" value={editPhotoURL} onChange={e => setEditPhotoURL(e.target.value)} placeholder="Enter image URL" className="w-full border border-slate-200 p-3 rounded-xl font-bold text-indigo-950 outline-none focus:border-red-500 transition-all" />
+                  </div>
                 </div>
                 <button 
                   onClick={async () => {
@@ -1794,7 +1810,8 @@ export default function App() {
                     try {
                       await update(ref(db, `users/${user.uid}`), {
                         name: editName,
-                        phone: editPhone
+                        phone: editPhone,
+                        photoURL: editPhotoURL
                       });
                       alert('Profile updated successfully!');
                       setView('profile');
@@ -3030,6 +3047,17 @@ export default function App() {
                                 setAdminTab('orders');
                                 setOrderSearch(u.id);
                               }} className="text-red-500 p-3 hover:bg-red-50 rounded-xl transition-all font-black text-xs uppercase">Orders</button>
+                              <button onClick={async () => {
+                                if (confirm(`Are you sure you want to delete user ${u.name || u.email}? This cannot be undone.`)) {
+                                  try {
+                                    await remove(ref(db, `users/${u.id}`));
+                                    alert('User deleted successfully from database.');
+                                  } catch (error: any) {
+                                    console.error("Delete error:", error);
+                                    alert(`Failed to delete user: ${error.message}`);
+                                  }
+                                }
+                              }} className="text-red-600 p-3 hover:bg-red-50 rounded-xl transition-all font-black text-xs uppercase">Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -3075,6 +3103,16 @@ export default function App() {
                           setAdminTab('orders');
                           setOrderSearch(u.id);
                         }} className="flex-1 bg-red-100 text-red-700 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap">View Orders</button>
+                        <button onClick={async () => {
+                          if (confirm(`Delete user ${u.name || u.email}?`)) {
+                            try {
+                              await remove(ref(db, `users/${u.id}`));
+                              alert('User deleted successfully.');
+                            } catch (error: any) {
+                              alert(`Error: ${error.message}`);
+                            }
+                          }
+                        }} className="flex-1 bg-red-600 text-white py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap">Delete</button>
                       </div>
                     </div>
                   ))}

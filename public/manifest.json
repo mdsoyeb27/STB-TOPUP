@@ -1,5 +1,5 @@
 {
-  "name": "STB TOPUP",
+  "name": "STB - Premium Gaming Store",
   "short_name": "STB TOPUP",
   "description": "The most trusted gaming top-up platform in Bangladesh.",
   "start_url": "/",
@@ -8,13 +8,13 @@
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgd3BT_zgyd4C2h6b55pya4Xz0WlS0BFoD6xvGxtfcB91x2PpOIcxmIOiCp1PjvndPm8YySIqojyp9rmZQ38qwlE-rTzEq8BYSLTJ7ilrtvmKBHbIwaj6EhKFGIIwnFBrYS8Q8oUAdux81RecoNCASqA5-Zhluz3yA0318Az1z4eq4dh47qcXQbkrkJODd8/s500/Blue%20and%20Green%20Flat%20Typographic%20E-Commerce%20Online%20Shop%20Logo.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/8002/8002111.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgd3BT_zgyd4C2h6b55pya4Xz0WlS0BFoD6xvGxtfcB91x2PpOIcxmIOiCp1PjvndPm8YySIqojyp9rmZQ38qwlE-rTzEq8BYSLTJ7ilrtvmKBHbIwaj6EhKFGIIwnFBrYS8Q8oUAdux81RecoNCASqA5-Zhluz3yA0318Az1z4eq4dh47qcXQbkrkJODd8/s500/Blue%20and%20Green%20Flat%20Typographic%20E-Commerce%20Online%20Shop%20Logo.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/8002/8002111.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
